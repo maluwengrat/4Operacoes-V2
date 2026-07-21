@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Math Shooter</title>
+  <link rel="shortcut icon" href="TemplateData/favicon.ico">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100vw; height: 100vh;
+      background: #000;
+      overflow: hidden;
+    }
+
+    #rotate-msg {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #08080f;
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 20px; z-index: 9999;
+    }
+    #rotate-msg .icon { font-size: 4rem; animation: girar 2s ease-in-out infinite; }
+    @keyframes girar {
+      0%   { transform: rotate(0deg); }
+      50%  { transform: rotate(90deg); }
+      100% { transform: rotate(90deg); }
+    }
+    #rotate-msg p {
+      color: #f97316; font-family: sans-serif;
+      font-size: 1.1rem; text-align: center;
+    }
+
+    @media screen and (orientation: portrait) and (max-width: 1024px) {
+      #rotate-msg { display: flex !important; }
+      #wrapper    { display: none !important; }
+    }
+
+    #wrapper {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #unity-container {
+      position: absolute;
+      width: 1920px;
+      height: 1080px;
+      top: 50%;
+      left: 50%;
+      transform-origin: center center;
+    }
+
+    #unity-canvas {
+      width: 1920px !important;
+      height: 1080px !important;
+      outline: none;
+      display: block;
+    }
+
+    #unity-loading-bar {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    #unity-logo {
+      width: 154px; height: 130px;
+      background: url('TemplateData/unity-logo-dark.png') no-repeat center;
+      background-size: contain;
+      margin: 0 auto 10px;
+    }
+    #unity-progress-bar-empty {
+      width: 280px; height: 8px;
+      background: #333; border-radius: 4px; overflow: hidden;
+    }
+    #unity-progress-bar-full {
+      width: 0%; height: 100%;
+      background: #f97316; border-radius: 4px;
+    }
+    #unity-footer {
+      position: absolute; bottom: 0; right: 0;
+      padding: 5px 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    #unity-build-title {
+      color: rgba(255,255,255,0.35);
+      font-size: 10px; font-family: sans-serif;
+    }
+    #unity-fullscreen-button {
+      width: 32px; height: 32px; cursor: pointer;
+      background: url('TemplateData/fullscreen-button.png') no-repeat center;
+      background-size: contain; opacity: 0.9;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    #unity-fullscreen-button:hover { opacity: 1; transform: scale(1.2); }
+    #unity-warning {
+      position: absolute; top: 0; left: 0;
+      width: 100%; z-index: 10; display: none;
+    }
+    #unity-logo-title-footer { display: none; }
+
+    /* Banner de fullscreen — só aparece no mobile, some após clicar */
+    #fs-banner {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%;
+      background: #f97316;
+      color: #fff;
+      font-family: sans-serif;
+      font-size: 1rem;
+      font-weight: bold;
+      text-align: center;
+      padding: 14px;
+      z-index: 99999;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="fs-banner">⛶ &nbsp;TOQUE AQUI PARA TELA CHEIA</div>
+
+  <div id="rotate-msg">
+    <div class="icon">📱</div>
+    <p>GIRE O CELULAR<br>PARA JOGAR</p>
+  </div>
+
+  <div id="wrapper">
+    <div id="unity-container">
+      <canvas id="unity-canvas" width=1920 height=1080 tabindex="0"></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+      </div>
+      <div id="unity-warning"></div>
+      <div id="unity-footer">
+        <div id="unity-logo-title-footer"></div>
+        <div id="unity-build-title">Math Shooter</div>
+        <div id="unity-fullscreen-button"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var GAME_W = 1920, GAME_H = 1080;
+
+    function escalar() {
+      var container = document.getElementById('unity-container');
+      if (!container) return;
+      var ww = window.innerWidth, wh = window.innerHeight;
+      var scale = Math.min(ww / GAME_W, wh / GAME_H);
+      container.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
+    }
+
+    escalar();
+    window.addEventListener('resize', escalar);
+    screen.orientation && screen.orientation.addEventListener('change', function() {
+      setTimeout(escalar, 300);
+    });
+    document.addEventListener('fullscreenchange',       function() { setTimeout(escalar, 100); });
+    document.addEventListener('webkitfullscreenchange', function() { setTimeout(escalar, 100); });
+
+    var canvas = document.querySelector("#unity-canvas");
+    canvas.style.outline = "none";
+    window.addEventListener('load', function() { canvas.focus(); escalar(); });
+    document.addEventListener('click',   function() { canvas.focus(); });
+    document.addEventListener('keydown', function() { canvas.focus(); });
+
+    function unityShowBanner(msg, type) {
+      // Suprime erros de permissão do Unity (Permissions check failed)
+      // que ocorrem no mobile durante inicialização e não afetam o jogo
+      if (msg && msg.indexOf('ermission') !== -1) return;
+
+      var wb = document.querySelector("#unity-warning");
+      function upd() { wb.style.display = wb.children.length ? 'block' : 'none'; }
+      var d = document.createElement('div');
+      d.innerHTML = msg;
+      wb.appendChild(d);
+      if (type == 'error') d.style = 'background:red;padding:10px;color:#fff;';
+      else {
+        if (type == 'warning') d.style = 'background:orange;padding:10px;';
+        setTimeout(function() { wb.removeChild(d); upd(); }, 5000);
+      }
+      upd();
+    }
+
+    var buildUrl = "Build";
+    var config = {
+      arguments: [],
+      dataUrl:            buildUrl + "/docs.data",
+      frameworkUrl:       buildUrl + "/docs.framework.js",
+      codeUrl:            buildUrl + "/docs.wasm",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName:        "UTFPR",
+      productName:        "Math Shooter",
+      productVersion:     "1.0",
+      showBanner:         unityShowBanner,
+    };
+
+    document.querySelector("#unity-loading-bar").style.display = "block";
+
+    var script = document.createElement("script");
+    script.src = buildUrl + "/docs.loader.js";
+    script.onload = () => {
+      createUnityInstance(canvas, config, (progress) => {
+        document.querySelector("#unity-progress-bar-full").style.width = (100 * progress) + "%";
+      }).then((unityInstance) => {
+        document.querySelector("#unity-loading-bar").style.display = "none";
+
+        // Botão de fullscreen no rodapé
+        document.querySelector("#unity-fullscreen-button").onclick = () => {
+          unityInstance.SetFullscreen(1);
+        };
+
+        // Avisa o Unity que é mobile para mostrar os botões de controle
+        var isMobileJS = /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent)
+                      || (navigator.maxTouchPoints > 1);
+        if (isMobileJS) {
+          // Mostra o banner de tela cheia
+          var fsBanner = document.getElementById('fs-banner');
+          fsBanner.style.display = 'block';
+          fsBanner.addEventListener('click', function() {
+            unityInstance.SetFullscreen(1);
+            fsBanner.style.display = 'none';
+          });
+          fsBanner.addEventListener('touchstart', function() {
+            unityInstance.SetFullscreen(1);
+            fsBanner.style.display = 'none';
+          });
+
+          setTimeout(function() {
+            try { unityInstance.SendMessage('MobileUI', 'SetMobileFromJS', '1'); } catch(e) {}
+          }, 500);
+          setTimeout(function() {
+            try { unityInstance.SendMessage('MobileUI', 'SetMobileFromJS', '1'); } catch(e) {}
+          }, 2000);
+        }
+
+        setTimeout(function() { canvas.focus(); escalar(); }, 200);
+      }).catch((msg) => { alert(msg); });
+    };
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>
