@@ -51,15 +51,41 @@ public class FeedbackManager : MonoBehaviour
 
     CanvasGroup _cg;   // para fade com alpha
 
-    // ── Mensagens aleatórias ───────────────────────────────────────
+    // ── Mensagens de acerto ─────────────────────────────────────────
     readonly string[] _acertos = {
         "Excelente!", "Muito bem!", "Correto!",
         "Perfeito!", "Boa resposta!", "Continue assim!", "Arrasou!"
     };
-    readonly string[] _erros = {
-        "Quase lá! Tente novamente.", "Não desista, você consegue!",
-        "Revise o cálculo com calma.", "Concentre-se e tente de novo!",
-        "Todo erro é aprendizado!", "Você está chegando lá!", "Mais atenção!"
+
+    // ── Dicas explicativas de erro, separadas por operação ──────────
+    readonly string[] _dicasSoma = {
+        "Some as duas casas com calma, uma de cada vez.",
+        "Conte nos dedos se precisar, sem pressa!",
+        "Comece pelo número maior e vá somando o menor.",
+    };
+
+    readonly string[] _dicasSubtracao = {
+        "Subtração é o contrário da soma: pense em quanto falta.",
+        "Tente contar de trás para frente a partir do maior número.",
+        "Confira se não passou do número certo ao contar.",
+    };
+
+    readonly string[] _dicasMultiplicacao = {
+        "Use a tabuada!",
+        "Multiplicação é uma soma repetida — tente somar o número várias vezes.",
+        "Revise a tabuada desse número antes de responder.",
+    };
+
+    readonly string[] _dicasDivisao = {
+        "Pense: quantas vezes o segundo número cabe dentro do primeiro?",
+        "Divisão é o contrário da multiplicação — use a tabuada ao contrário.",
+        "Tente por tentativa: multiplique até chegar perto do número.",
+    };
+
+    readonly string[] _dicasGenericas = {
+        "Revise o cálculo com calma.",
+        "Não desista, você consegue!",
+        "Todo erro é aprendizado!",
     };
 
     // ══════════════════════════════════════════════════════════════
@@ -95,9 +121,10 @@ public class FeedbackManager : MonoBehaviour
     public void MostrarErro(string pergunta, int respostaCorreta)
     {
         if (GameManager.instance != null && GameManager.instance.IsPanelAtivo()) return;
-        string msg = _erros[Random.Range(0, _erros.Length)];
+        string[] pool = EscolherDicasPorOperacao(pergunta);
+        string msg = pool[Random.Range(0, pool.Length)];
         MostrarMensagem(msg, new Color(1f, 0.27f, 0.27f));
-        _timer = 2.5f;
+        _timer = 3.2f; // dicas explicativas são mais longas, precisam de mais tempo na tela
     }
 
     public void MostrarAcerto()
@@ -109,7 +136,33 @@ public class FeedbackManager : MonoBehaviour
     }
 
     // ══════════════════════════════════════════════════════════════
-    // UPDATE — fade de saída
+    // INTERNOS
+    // ══════════════════════════════════════════════════════════════
+
+    // Detecta a operação pelo símbolo presente na pergunta (ex: "1 + 1")
+    // e devolve a lista de dicas correspondente.
+    string[] EscolherDicasPorOperacao(string pergunta)
+    {
+        if (string.IsNullOrEmpty(pergunta)) return _dicasGenericas;
+
+        if (pergunta.Contains("+")) return _dicasSoma;
+        if (pergunta.Contains("-")) return _dicasSubtracao;
+        if (pergunta.Contains("x") || pergunta.Contains("X") || pergunta.Contains("*"))
+            return _dicasMultiplicacao;
+        if (pergunta.Contains("÷") || pergunta.Contains("/"))
+            return _dicasDivisao;
+
+        return _dicasGenericas;
+    }
+
+    void Exibir(string msg, Color cor)
+    {
+        painelRaiz.SetActive(true);
+        if (_cg != null) _cg.alpha = 1f;
+        if (textoMensagem) textoMensagem.text = msg;
+        if (barraLateral) barraLateral.color = cor;
+    }
+
     // ══════════════════════════════════════════════════════════════
     void Update()
     {
@@ -128,18 +181,6 @@ public class FeedbackManager : MonoBehaviour
             _cg.alpha = _timer < 0.4f ? Mathf.Clamp01(_timer / 0.4f) : 1f;
 
         if (_timer <= 0f) Esconder();
-    }
-
-    // ══════════════════════════════════════════════════════════════
-    // INTERNOS
-    // ══════════════════════════════════════════════════════════════
-
-    void Exibir(string msg, Color cor)
-    {
-        painelRaiz.SetActive(true);
-        if (_cg != null) _cg.alpha = 1f;
-        if (textoMensagem) textoMensagem.text = msg;
-        if (barraLateral) barraLateral.color = cor;
     }
 
     // Pega referências de um painel já montado no Inspector

@@ -11,8 +11,6 @@ public class GameManager : MonoBehaviour
 
     [Header("Prefabs")]
     public GameObject enemyPrefab;
-    public GameObject powerUpEscudoPrefab;
-    public GameObject powerUpTempoLentoPrefab;
 
     [Header("HUD")]
     public GameObject hudPanel;
@@ -32,7 +30,6 @@ public class GameManager : MonoBehaviour
     public GameObject modoJogoPanel;
     public Button btnSolo;
     public Button btnTurma;
-    public Button btnTutorial;
     public Button btnVoltarModo;
 
     [Header("Fase Completa")]
@@ -50,6 +47,8 @@ public class GameManager : MonoBehaviour
     private List<bool> historicoAcertos = new();
     private List<string> operacoesErradas = new();
     private HashSet<string> perguntasUsadas = new HashSet<string>();
+    private Dictionary<int, int> acertosPorFase = new();
+    private Dictionary<int, int> totalRespostasPorFase = new();
 
     private int correctAnswer = 0;
     private int score = 0;
@@ -61,10 +60,16 @@ public class GameManager : MonoBehaviour
     private int faseAoErrar = 1;
     private bool faseAprovada = false;
 
-    private const int totalEnemies = 5;
-    private const int ondasPorFase = 10;
+    private int turmaPerguntaIndex = -1;
+    private bool turmaRespondeuAtual = false;
+    private bool turmaPerguntaAtualBoss = false; 
 
+    private const int totalEnemies = 5;
+    private const int ondasPorFase = 7;
+
+    private float tempoPerguntaInicio = 0f;
     private float tempoInicioFase = 0f;
+    private float tempoInicioQuestao = 0f;
     private bool tempoLentoAtivo = false;
     private float tempoLentoTimer = 0f;
     private float tempoLentoMultiplicador = 0.5f;
@@ -72,9 +77,7 @@ public class GameManager : MonoBehaviour
     private float timerOnda = 0f;
     private float tempoLimiteOnda = 30f;
     private bool timerAtivo = false;
-
-    private int powerUpsSpawnadosNaFase = 0;
-    private const int maxPowerUpsPorFase = 2;
+    public bool timerPausadoExterno = false;
 
     private string[] nomesFase = { "", "Adicao", "Subtracao", "Divisao", "Multiplicacao" };
 
@@ -95,6 +98,16 @@ public class GameManager : MonoBehaviour
         AtualizarTimerUI();
     }
 
+    void SalaEncerradaPeloProfessor()
+    {
+        if (!jogoIniciado) return; 
+
+        if (FeedbackManager.instance != null)
+            FeedbackManager.instance.MostrarMensagem("O professor encerrou a sala.", new Color(1f, 0.3f, 0.1f));
+
+        VoltarAoMenu();
+    }
+
     void Awake() { instance = this; }
 
     void Start()
@@ -113,7 +126,12 @@ public class GameManager : MonoBehaviour
         btnSolo.onClick.AddListener(() =>
         {
             GameManager.modoAtual = ModoJogo.Solo;
-            IniciarJogo();
+            MostrarSomente(null); 
+
+            if (TutorialManager.instance != null)
+                TutorialManager.instance.PerguntarTutorialSolo();
+            else
+                IniciarJogo(); 
         });
 
         btnTurma.onClick.AddListener(() =>
@@ -122,15 +140,6 @@ public class GameManager : MonoBehaviour
             MostrarSomente(null);
             if (SalaManager.instance != null)
                 SalaManager.instance.AbrirPainelSala();
-        });
-
-        btnTutorial.onClick.AddListener(() =>
-        {
-            GameManager.modoAtual = ModoJogo.Tutorial;
-            MostrarSomente(null);
-            hudPanel.SetActive(false);
-            if (TutorialManager.instance != null)
-                TutorialManager.instance.AbrirTutorial();
         });
 
         if (btnRanking != null)
@@ -150,7 +159,6 @@ public class GameManager : MonoBehaviour
             bossQuestionText.gameObject.SetActive(false);
     }
 
-    // ← Update FORA do Start, no nível correto da classe
     void Update()
     {
         if (tempoLentoAtivo)
@@ -162,11 +170,15 @@ public class GameManager : MonoBehaviour
 
         if (timerAtivo && jogoIniciado)
         {
-            float fatorTimer = tempoLentoAtivo ? tempoLentoMultiplicador : 1f;
-            timerOnda -= Time.deltaTime * fatorTimer;
+            if (!timerPausadoExterno)
+            {
+                float fatorTimer = tempoLentoAtivo ? tempoLentoMultiplicador : 1f;
+                timerOnda -= Time.deltaTime * fatorTimer;
+            }
+
             AtualizarTimerUI();
 
-            if (timerOnda <= 0f)
+            if (!timerPausadoExterno && timerOnda <= 0f)
             {
                 timerAtivo = false;
                 timerText.gameObject.SetActive(false);
@@ -205,6 +217,11 @@ public class GameManager : MonoBehaviour
 
     public void VoltarAoMenu()
     {
+        CancelInvoke();
+        Time.timeScale = 1f;
+
+        modoAtual = ModoJogo.Solo;
+
         jogoIniciado = false;
         timerAtivo = false;
         historicoContas.Clear();
@@ -216,9 +233,18 @@ public class GameManager : MonoBehaviour
         timerText.gameObject.SetActive(false);
         questionText.gameObject.SetActive(false);
         if (bossQuestionText != null) bossQuestionText.gameObject.SetActive(false);
+
+        PlayerController player = FindFirstObjectByType<PlayerController>(FindObjectsInactive.Include);
+        if (player != null) player.gameObject.SetActive(false);
+        foreach (var e in FindAll<Enemy>()) Destroy(e.gameObject);
+
         MostrarSomente(menuPrincipalPanel);
         if (BackgroundManager.Instance != null) BackgroundManager.Instance.SetMainMenu();
         if (SoundManager.instance != null) SoundManager.instance.PararMusica();
+
+        if (FirebaseManager.instance != null) FirebaseManager.instance.PararTodasEscutasDePartida();
+        if (PoderManager.instance != null)
+            PoderManager.instance.RegistrarAcerto(turmaPerguntaAtualBoss, Time.time - tempoPerguntaInicio);
     }
 
     void MostrarSomente(GameObject painel)
@@ -238,6 +264,7 @@ public class GameManager : MonoBehaviour
 
     public void IniciarJogo()
     {
+        GameResultSender.instance?.IniciarNovaPartida();
         PlayerController player = FindFirstObjectByType<PlayerController>(FindObjectsInactive.Include);
         if (player != null) player.gameObject.SetActive(true);
 
@@ -249,15 +276,81 @@ public class GameManager : MonoBehaviour
         historicoAcertos.Clear();
         operacoesErradas.Clear();
         perguntasUsadas.Clear();
-        powerUpsSpawnadosNaFase = 0;
+        acertosPorFase.Clear();
+        totalRespostasPorFase.Clear();
         tempoInicioFase = Time.time;
 
         AtualizarUI();
         jogoIniciado = true;
         if (BackgroundManager.Instance != null) BackgroundManager.Instance.SetStage(faseAtual);
         if (VidasManager.instance != null) VidasManager.instance.ResetarVidas();
+        if (PoderManager.instance != null) PoderManager.instance.IniciarEscutaSeNecessario();
 
-        SpawnWave();
+        if (modoAtual == ModoJogo.Turma && FirebaseManager.instance != null)
+            FirebaseManager.instance.IniciarEscutaEncerramento(SalaEncerradaPeloProfessor);
+
+        if (modoAtual == ModoJogo.Turma)
+            IniciarModoTurma();
+        else
+            SpawnWave();
+    }
+
+    void IniciarModoTurma()
+    {
+        turmaPerguntaIndex = -1;
+        turmaRespondeuAtual = false;
+        timerAtivo = false;
+        timerText.gameObject.SetActive(false);
+        questionText.gameObject.SetActive(true);
+        if (bossQuestionText != null) bossQuestionText.gameObject.SetActive(false);
+        questionText.text = "Aguardando o professor...";
+
+        foreach (var e in FindAll<Enemy>()) if (e != null) Destroy(e.gameObject);
+
+        if (FirebaseManager.instance != null)
+            FirebaseManager.instance.IniciarEscutaPerguntas(OnNovaPerguntaTurma, SalaEncerradaPeloProfessor);
+    }
+
+    void OnNovaPerguntaTurma(string enunciado, int resposta, int fase, int index, bool boss)
+    {
+        if (!jogoIniciado || index == turmaPerguntaIndex) return;
+
+        turmaPerguntaIndex = index;
+        turmaRespondeuAtual = false;
+        turmaPerguntaAtualBoss = boss; 
+
+        if (fase != faseAtual)
+        {
+            faseAtual = fase;
+            if (SoundManager.instance != null) SoundManager.instance.TocarMusicaFase(faseAtual);
+            if (BackgroundManager.Instance != null) BackgroundManager.Instance.SetStage(faseAtual);
+        }
+
+        foreach (var e in FindAll<Enemy>()) if (e != null) Destroy(e.gameObject);
+
+        correctAnswer = resposta;
+        perguntaAtual = enunciado;
+
+        if (boss && bossQuestionText != null)
+        {
+            bossQuestionText.gameObject.SetActive(true);
+            questionText.gameObject.SetActive(false);
+            bossQuestionText.text = enunciado;
+        }
+        else
+        {
+            questionText.gameObject.SetActive(true);
+            if (bossQuestionText != null) bossQuestionText.gameObject.SetActive(false);
+            questionText.text = enunciado;
+        }
+
+        tempoPerguntaInicio = Time.time;
+        tempoInicioQuestao = Time.time;
+
+        AtualizarUI();
+
+        float velocidade = boss ? (0.8f + faseAtual * 0.15f) : (0.6f + faseAtual * 0.15f);
+        SpawnInimigosComNumeros(velocidade);
     }
 
     void ReiniciarJogo()
@@ -271,13 +364,13 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 1f;
         score = 0;
         faseAtual = faseAoErrar;
+        GameResultSender.instance?.IncrementarTentativa(faseAtual);
         ondasCompletas = 0;
         isBossWave = false;
         historicoContas.Clear();
         historicoAcertos.Clear();
         operacoesErradas.Clear();
         perguntasUsadas.Clear();
-        powerUpsSpawnadosNaFase = 0;
         tempoInicioFase = Time.time;
 
         MostrarSomente(null);
@@ -314,7 +407,6 @@ public class GameManager : MonoBehaviour
         isBossWave = false;
         perguntasUsadas.Clear();
         operacoesErradas.Clear();
-        powerUpsSpawnadosNaFase = 0;
         tempoInicioFase = Time.time;
         Time.timeScale = 1f;
 
@@ -335,7 +427,6 @@ public class GameManager : MonoBehaviour
         isBossWave = false;
         perguntasUsadas.Clear();
         operacoesErradas.Clear();
-        powerUpsSpawnadosNaFase = 0;
         tempoInicioFase = Time.time;
         Time.timeScale = 1f;
         historicoContas.Clear();
@@ -351,9 +442,9 @@ public class GameManager : MonoBehaviour
         SpawnWave();
     }
 
-    void EnviarResultado(bool concluiuFase)
+    public void EnviarResultadoParcial()
     {
-        if (FirebaseManager.instance == null) return;
+        if (GameResultSender.instance == null) return;
 
         int acertos = 0;
         foreach (var a in historicoAcertos) if (a) acertos++;
@@ -367,36 +458,39 @@ public class GameManager : MonoBehaviour
             erradasEscapadas.Add("\"" + op.Replace("\"", "\\\"") + "\"");
         string operacoesJson = "[" + string.Join(",", erradasEscapadas) + "]";
 
-        FirebaseManager.instance.SalvarResultado(
+        GameResultSender.instance.Enviar(
             faseAtual, score, acertos, erros,
             aproveitamento, tempoTotal,
-            operacoesJson, concluiuFase);
+            operacoesJson, false 
+        );
     }
 
+    void EnviarResultado(bool concluiuFase)
+    {
+        if (GameResultSender.instance == null) return;
+
+        int acertos = 0;
+        foreach (var a in historicoAcertos) if (a) acertos++;
+        int erros = historicoAcertos.Count - acertos;
+        int aproveitamento = historicoAcertos.Count > 0
+            ? Mathf.RoundToInt((float)acertos / historicoAcertos.Count * 100) : 0;
+        int tempoTotal = Mathf.RoundToInt(Time.time - tempoInicioFase);
+
+        var erradasEscapadas = new List<string>();
+        foreach (var op in operacoesErradas)
+            erradasEscapadas.Add("\"" + op.Replace("\"", "\\\"") + "\"");
+        string operacoesJson = "[" + string.Join(",", erradasEscapadas) + "]";
+
+        GameResultSender.instance.Enviar(
+            faseAtual, score, acertos, erros,
+            aproveitamento, tempoTotal,
+            operacoesJson, concluiuFase
+        );
+    }
     public void AtivarTempoLento(float duracao)
     {
         tempoLentoAtivo = true;
         tempoLentoTimer = duracao;
-    }
-
-    void TentarSpawnPowerUp()
-    {
-        if (powerUpsSpawnadosNaFase >= maxPowerUpsPorFase) return;
-        if (ondasCompletas <= 1) return;
-        if (isBossWave) return;
-        if (Random.Range(0f, 1f) > 0.25f) return;
-
-        float x = Random.Range(-4f, 4f);
-        Vector3 pos = new Vector3(x, 5f, 0);
-
-        GameObject go = new GameObject("PowerUp");
-        go.transform.position = pos;
-
-        PowerUp pu = go.AddComponent<PowerUp>();
-        pu.tipo = Random.Range(0, 2) == 0 ? PowerUp.Tipo.Escudo : PowerUp.Tipo.TempoLento;
-        pu.duracao = 8f;
-
-        powerUpsSpawnadosNaFase++;
     }
 
     void SpawnWave()
@@ -404,13 +498,20 @@ public class GameManager : MonoBehaviour
         if (ondasCompletas == 0)
         {
             perguntasUsadas.Clear();
-            powerUpsSpawnadosNaFase = 0;
         }
 
         tempoLentoAtivo = false;
         tempoLentoTimer = 0f;
-        isBossWave = (ondasCompletas >= ondasPorFase - 1);
-        float tempoBase = isBossWave ? tempoLimiteOnda * 1.5f : tempoLimiteOnda;
+        isBossWave = (ondasCompletas == 5) || (ondasCompletas == 6);
+
+        float tempoBase;
+        if (!isBossWave)
+            tempoBase = tempoLimiteOnda;
+        else if (ondasCompletas == 5)
+            tempoBase = tempoLimiteOnda * 1.8f;
+        else
+            tempoBase = tempoLimiteOnda * 1.2f;
+
         timerOnda = Mathf.Max(10f, tempoBase - (ondasCompletas * 3f));
         timerAtivo = true;
         timerText.gameObject.SetActive(true);
@@ -421,26 +522,30 @@ public class GameManager : MonoBehaviour
 
     void SpawnInimigosNormais()
     {
-        if (SoundManager.instance != null) SoundManager.instance.VoltarMusicaFase();
+        if (SoundManager.instance != null)
+            SoundManager.instance.VoltarMusicaFase();
+
         GerarPergunta(out int a, out int b);
         SpawnInimigosComNumeros(0.6f + (faseAtual * 0.15f) + (ondasCompletas * 0.05f));
     }
 
     void SpawnBoss()
     {
-        if (SoundManager.instance != null) SoundManager.instance.TocarMusicaBoss();
+        if (SoundManager.instance != null)
+            SoundManager.instance.TocarMusicaBoss();
+
         GerarPerguntaBoss();
-        SpawnInimigosComNumeros(0.3f + (faseAtual * 0.08f) + (ondasCompletas * 0.03f));
+
+        bool bossFinal = (ondasCompletas == 6);
+        float velocidade = bossFinal  
+                    ? 0.5f + (faseAtual * 0.1f)   
+            : 0.8f + (faseAtual * 0.15f); 
+
+        SpawnInimigosComNumeros(velocidade);
     }
 
     void SpawnInimigosComNumeros(float velocidade)
     {
-        if (enemyPrefab == null)
-        {
-            Debug.LogError("enemyPrefab é NULL! Conecte no Inspector.");
-            return;
-        }
-
         var usados = new HashSet<int> { correctAnswer };
         int[] nums = new int[totalEnemies];
         nums[0] = correctAnswer;
@@ -467,9 +572,10 @@ public class GameManager : MonoBehaviour
         }
 
         float[] posX = GerarPosicoesX(totalEnemies);
+        float[] posY = GerarPosicoesY(totalEnemies);
         for (int i = 0; i < totalEnemies; i++)
         {
-            Vector3 pos = new Vector3(posX[i], 3f + (i * 2f), 0);
+            Vector3 pos = new Vector3(posX[i], posY[i], 0);
             GameObject go = Instantiate(enemyPrefab, pos, Quaternion.identity);
 
             SpriteRenderer sr = go.GetComponent<SpriteRenderer>();
@@ -478,6 +584,7 @@ public class GameManager : MonoBehaviour
             Enemy e = go.GetComponent<Enemy>();
             e.SetNumber(nums[i]);
             e.speed = velocidade;
+            e.SetColunaFixa(posX[i]);
         }
     }
 
@@ -493,32 +600,36 @@ public class GameManager : MonoBehaviour
                 case 1:
                     a = Random.Range(1, 5); b = Random.Range(1, 9 - a + 1);
                     correctAnswer = a + b;
-                    perguntaAtual = $"{a} + {b} = ";
+                    perguntaAtual = $"{a} + {b}";
                     break;
                 case 2:
                     correctAnswer = Random.Range(1, 9); b = Random.Range(1, 9);
                     a = correctAnswer + b;
-                    perguntaAtual = $"{a} - {b} = ";
+                    perguntaAtual = $"{a} - {b}";
                     break;
                 case 3:
                     correctAnswer = Random.Range(1, 9); b = Random.Range(2, 9);
                     a = b * correctAnswer;
-                    perguntaAtual = $"{a} ÷ {b} = ";
+                    perguntaAtual = $"{a} ÷ {b}";
                     break;
                 case 4:
                     a = Random.Range(1, 4); b = Random.Range(1, 9 / a + 1);
                     correctAnswer = a * b;
-                    perguntaAtual = $"{a} × {b} = ";
+                    perguntaAtual = $"{a} × {b}";
                     break;
             }
             tentativas++;
         } while (perguntasUsadas.Contains(perguntaAtual) && tentativas < 30);
 
         perguntasUsadas.Add(perguntaAtual);
+
         questionText.gameObject.SetActive(true);
-        if (bossQuestionText != null) bossQuestionText.gameObject.SetActive(false);
+        if (bossQuestionText != null)
+            bossQuestionText.gameObject.SetActive(false);
+
         questionText.text = perguntaAtual;
         historicoContas.Add(perguntaAtual + correctAnswer);
+        tempoPerguntaInicio = Time.time;
     }
 
     void GerarPerguntaBoss()
@@ -531,26 +642,28 @@ public class GameManager : MonoBehaviour
                 a = Random.Range(1, 4); b = Random.Range(1, 4);
                 c = Random.Range(1, 9 - a - b + 1);
                 correctAnswer = a + b + c;
-                perguntaAtual = $"{a} + {b} + {c} = ";
+                perguntaAtual = $"{a} + {b} + {c}";
                 break;
             case 2:
                 correctAnswer = Random.Range(1, 5);
                 b = Random.Range(1, 4); c = Random.Range(1, 4);
                 a = correctAnswer + b + c;
-                perguntaAtual = $"{a} - {b} - {c} = ";
+                perguntaAtual = $"{a} - {b} - {c}";
                 break;
-            case 3:
-                b = Random.Range(2, 5);
-                int quoc = Random.Range(1, 4);
-                a = b * quoc; c = Random.Range(1, 9 - quoc + 1);
+            case 3: 
+                b = Random.Range(0, 2) == 0 ? 8 : 9;
+                int quoc = Random.Range(1, 5);
+                a = b * quoc;
+                c = Random.Range(1, 6);
                 correctAnswer = quoc + c;
-                perguntaAtual = $"({a} ÷ {b}) + {c} = ";
+                perguntaAtual = $"({a} ÷ {b}) + {c}";
                 break;
-            case 4:
-                a = Random.Range(1, 3); b = Random.Range(1, 3);
-                c = Random.Range(1, 9 - (a * b) + 1);
+            case 4: 
+                a = Random.Range(0, 2) == 0 ? 8 : 9;
+                b = Random.Range(1, 5);
+                c = Random.Range(1, 6);
                 correctAnswer = (a * b) + c;
-                perguntaAtual = $"({a} × {b}) + {c} = ";
+                perguntaAtual = $"({a} × {b}) + {c}";
                 break;
             default:
                 GerarPergunta(out a, out b);
@@ -570,16 +683,33 @@ public class GameManager : MonoBehaviour
         }
 
         historicoContas.Add(perguntaAtual + correctAnswer);
+        tempoPerguntaInicio = Time.time;
     }
 
     float[] GerarPosicoesX(int quantidade)
     {
         float[] pos = new float[quantidade];
-        float larg = 18f;
+        float larg = 22f; 
         float espac = larg / quantidade;
         float inicio = -larg / 2f + espac / 2f;
         for (int i = 0; i < quantidade; i++)
-            pos[i] = inicio + (i * espac) + Random.Range(-0.2f, 0.2f);
+            pos[i] = inicio + (i * espac) + Random.Range(-0.3f, 0.3f);
+
+        for (int i = 0; i < pos.Length; i++)
+        {
+            int j = Random.Range(i, pos.Length);
+            (pos[i], pos[j]) = (pos[j], pos[i]);
+        }
+        return pos;
+    }
+
+    float[] GerarPosicoesY(int quantidade)
+    {
+        float[] pos = new float[quantidade];
+        float espac = (8f - 3f) / quantidade;
+        for (int i = 0; i < quantidade; i++)
+            pos[i] = 3f + (i * espac) + Random.Range(-0.2f, 0.2f);
+
         for (int i = 0; i < pos.Length; i++)
         {
             int j = Random.Range(i, pos.Length);
@@ -590,28 +720,53 @@ public class GameManager : MonoBehaviour
 
     public void CheckAnswer(int number)
     {
+
         if (!jogoIniciado) return;
+
+        if (modoAtual == ModoJogo.Turma)
+        {
+            CheckAnswerTurma(number);
+            return;
+        }
+
+        if (!jogoIniciado) return;
+
+        if (!totalRespostasPorFase.ContainsKey(faseAtual)) totalRespostasPorFase[faseAtual] = 0;
+        totalRespostasPorFase[faseAtual]++;
 
         if (number == correctAnswer)
         {
+            if (!acertosPorFase.ContainsKey(faseAtual)) acertosPorFase[faseAtual] = 0;
+            acertosPorFase[faseAtual]++;
+
             timerAtivo = false;
             timerText.gameObject.SetActive(false);
 
             score += isBossWave ? 50 * faseAtual : 10 * faseAtual;
+            FirebaseManager.instance?.AtualizarPontosSala(score, faseAtual);
 
             FeedbackManager.instance.MostrarAcerto();
-            if (EfeitosManager.instance != null) EfeitosManager.instance.EfeitoAcerto(Vector3.zero);
+
+            if (EfeitosManager.instance != null)
+                EfeitosManager.instance.EfeitoAcerto(Vector3.zero);
 
             historicoAcertos.Add(true);
+            GameResultSender.instance?.EnviarQuestaoAtual(
+               faseAtual, nomesFase[faseAtual], ondasCompletas + 1,
+               perguntaAtual, correctAnswer.ToString(), number.ToString(),
+               true, Time.time - tempoInicioQuestao
+           );
             ondasCompletas++;
             AtualizarUI();
-            TentarSpawnPowerUp();
+
+            if (TutorialManager.instance != null && TutorialManager.instance.modoGuiado)
+                TutorialManager.instance.NotificarAcerto();
+
+            if (PoderManager.instance != null)
+                PoderManager.instance.RegistrarAcerto(isBossWave, Time.time - tempoPerguntaInicio);
 
             foreach (var e in FindAll<Enemy>())
                 if (e != null) Destroy(e.gameObject);
-
-            if (PoderManager.instance != null)
-                PoderManager.instance.RegistrarAcerto(isBossWave, timerOnda);
 
             if (ondasCompletas >= ondasPorFase)
             {
@@ -628,15 +783,27 @@ public class GameManager : MonoBehaviour
         {
             timerAtivo = false;
             timerText.gameObject.SetActive(false);
+
+            // Registra operação errada
             operacoesErradas.Add(perguntaAtual + correctAnswer);
+
+            GameResultSender.instance?.EnviarQuestaoAtual(
+               faseAtual, nomesFase[faseAtual], ondasCompletas + 1,
+               perguntaAtual, correctAnswer.ToString(), number.ToString(),
+               false, Time.time - tempoInicioQuestao
+           );
 
             PlayerController player = FindFirstObjectByType<PlayerController>();
             if (player != null && player.TemEscudo())
             {
                 player.UsarEscudo();
                 FeedbackManager.instance.MostrarMensagem("ESCUDO BLOQUEOU!", new Color(0.3f, 0.8f, 1f));
-                if (EfeitosManager.instance != null) EfeitosManager.instance.ShakeCamera();
-                foreach (var e in FindAll<Enemy>()) if (e != null) Destroy(e.gameObject);
+                if (EfeitosManager.instance != null)
+                    EfeitosManager.instance.ShakeCamera();
+
+                foreach (var e in FindAll<Enemy>())
+                    if (e != null) Destroy(e.gameObject);
+
                 Invoke(nameof(SpawnWave), 1.5f);
             }
             else
@@ -645,30 +812,69 @@ public class GameManager : MonoBehaviour
                 historicoAcertos.Add(false);
                 faseAoErrar = faseAtual;
 
+                if (PoderManager.instance != null)
+                    PoderManager.instance.RegistrarErro();
+
                 if (EfeitosManager.instance != null)
                 {
                     EfeitosManager.instance.FlashErro();
                     EfeitosManager.instance.ShakeCamera();
                 }
 
-                if (PoderManager.instance != null)
-                    PoderManager.instance.RegistrarErro();
+                foreach (var e in FindAll<Enemy>())
+                    if (e != null) Destroy(e.gameObject);
 
-                bool gameOver = VidasManager.instance != null
+                bool gameOverPorErro = VidasManager.instance != null
                     ? VidasManager.instance.PerdervVida()
                     : true;
 
-                if (gameOver)
+                if (gameOverPorErro)
+                {
                     IniciarSequenciaGameOver();
+                }
                 else
                 {
-                    FeedbackManager.instance.MostrarMensagem(
-                        $"VIDA PERDIDA! {VidasManager.instance.GetVidas()} restante(s)",
-                        new Color(1f, 0.3f, 0.1f));
-                    Invoke(nameof(ReiniciarFaseAtual), 2f);
+                    Invoke(nameof(ReiniciarFaseAtual), 1.5f);
                 }
             }
         }
+    }
+    void CheckAnswerTurma(int number)
+    {
+        if (turmaRespondeuAtual) return;
+        turmaRespondeuAtual = true;
+
+    bool acertou = (number == correctAnswer);
+
+        if (acertou)
+        {
+            score += 10 * faseAtual;
+            FeedbackManager.instance.MostrarAcerto();
+            if (EfeitosManager.instance != null)
+                EfeitosManager.instance.EfeitoAcerto(Vector3.zero);
+
+            if (PoderManager.instance != null)
+                PoderManager.instance.RegistrarAcerto(false, Time.time - tempoPerguntaInicio);
+        }
+        else
+        {
+            FeedbackManager.instance.MostrarErro(perguntaAtual, correctAnswer);
+            if (EfeitosManager.instance != null)
+            {
+                EfeitosManager.instance.FlashErro();
+                EfeitosManager.instance.ShakeCamera();
+            }
+
+            if (PoderManager.instance != null)
+                PoderManager.instance.RegistrarErro();
+        }
+
+        FirebaseManager.instance?.AtualizarRespostaTurma(score, faseAtual, acertou);
+
+        foreach (var e in FindAll<Enemy>()) if (e != null) Destroy(e.gameObject);
+
+        AtualizarUI();
+        questionText.text = "Aguardando o professor...";
     }
 
     void IniciarSequenciaGameOver()
@@ -687,6 +893,7 @@ public class GameManager : MonoBehaviour
 
     public void ExecutarGameOver()
     {
+
         EnviarResultado(false);
         FeedbackManager.instance.Esconder();
         hudPanel.SetActive(false);
@@ -708,7 +915,8 @@ public class GameManager : MonoBehaviour
             SoundManager.instance.PararMusica();
         }
 
-        if (EfeitosManager.instance != null) EfeitosManager.instance.EfeitoPassarFase();
+        if (EfeitosManager.instance != null)
+            EfeitosManager.instance.EfeitoPassarFase();
 
         hudPanel.SetActive(false);
         if (BackgroundManager.Instance != null) BackgroundManager.Instance.SetNextLevel();
@@ -720,12 +928,17 @@ public class GameManager : MonoBehaviour
             ? Mathf.RoundToInt((float)acertos / historicoAcertos.Count * 100) : 0;
 
         faseAprovada = percentual == 100;
+
+        // Envia resultado (fase concluída)
         EnviarResultado(faseAprovada);
 
-        faseTituloText.text = faseAprovada ? $"FASE {faseAtual} COMPLETA!" : "Tente Novamente!";
+        faseTituloText.text = faseAprovada
+            ? $"FASE {faseAtual} COMPLETA!"
+            : "Tente Novamente!";
 
         string resumo = $"Aproveitamento: {percentual}%  |  Acertos: {acertos}  Erros: {erros}\n\n";
-        if (!faseAprovada) resumo += "Acerte TODAS as questões para avançar!\n\n";
+        if (!faseAprovada)
+            resumo += "Acerte TODAS as questões para avançar!\n\n";
         resumo += "Cálculos da fase:\n";
         for (int i = 0; i < historicoContas.Count; i++)
         {
@@ -756,7 +969,8 @@ public class GameManager : MonoBehaviour
             SoundManager.instance.PararMusica();
         }
 
-        if (EfeitosManager.instance != null) EfeitosManager.instance.EfeitoPassarFase();
+        if (EfeitosManager.instance != null)
+            EfeitosManager.instance.EfeitoPassarFase();
 
         hudPanel.SetActive(false);
 
@@ -766,10 +980,48 @@ public class GameManager : MonoBehaviour
             ? Mathf.RoundToInt((float)acertos / historicoAcertos.Count * 100) : 0;
 
         faseAprovada = true;
-        EnviarResultado(true);
 
         faseTituloText.text = "PARABÉNS!";
-        faseDescText.text = $"Você completou todas as fases!\n\nPontuação final: {score}\nAproveitamento: {percentual}%";
+        faseDescText.text = $"Você completou todas as fases!\n\n"
+                          + $"Pontuação final: {score}\n"
+                          + $"Aproveitamento: {percentual}%";
+
+        // ── Monta e envia o relatório final (planilha nova) ──────────────
+        int pf1 = acertosPorFase.GetValueOrDefault(1, 0);
+        int pf2 = acertosPorFase.GetValueOrDefault(2, 0);
+        int pf3 = acertosPorFase.GetValueOrDefault(3, 0);
+        int pf4 = acertosPorFase.GetValueOrDefault(4, 0);
+
+        int tr1 = totalRespostasPorFase.GetValueOrDefault(1, 0);
+        int tr2 = totalRespostasPorFase.GetValueOrDefault(2, 0);
+        int tr3 = totalRespostasPorFase.GetValueOrDefault(3, 0);
+        int tr4 = totalRespostasPorFase.GetValueOrDefault(4, 0);
+
+        float pc1 = tr1 > 0 ? (float)pf1 / tr1 : 0f;
+        float pc2 = tr2 > 0 ? (float)pf2 / tr2 : 0f;
+        float pc3 = tr3 > 0 ? (float)pf3 / tr3 : 0f;
+        float pc4 = tr4 > 0 ? (float)pf4 / tr4 : 0f;
+
+        int tent1 = GameResultSender.instance != null ? GameResultSender.instance.GetTentativaFinal(1) : 1;
+        int tent2 = GameResultSender.instance != null ? GameResultSender.instance.GetTentativaFinal(2) : 1;
+        int tent3 = GameResultSender.instance != null ? GameResultSender.instance.GetTentativaFinal(3) : 1;
+        int tent4 = GameResultSender.instance != null ? GameResultSender.instance.GetTentativaFinal(4) : 1;
+
+        int pontuacaoTotal = pf1 + pf2 + pf3 + pf4;
+        int totalRespostas = tr1 + tr2 + tr3 + tr4;
+        float percentTotalPontos = totalRespostas > 0 ? (float)pontuacaoTotal / totalRespostas : 0f;
+
+        int somaTentativas = tent1 + tent2 + tent3 + tent4;
+        float percentTotalFases = somaTentativas > 0 ? 4f / somaTentativas : 0f;
+
+        GameResultSender.instance?.EnviarRelatorioFinal(
+            pf1, pc1, tent1,
+            pf2, pc2, tent2,
+            pf3, pc3, tent3,
+            pf4, pc4, tent4,
+            pontuacaoTotal, percentTotalPontos, percentTotalFases
+        );
+        // ───────────────────────────────────────────────────────────────
 
         historicoContas.Clear();
         historicoAcertos.Clear();
@@ -783,7 +1035,6 @@ public class GameManager : MonoBehaviour
         MostrarSomente(faseCompletaPanel);
         Invoke(nameof(PausarJogo), 0.6f);
     }
-
     void PausarJogo() { Time.timeScale = 0f; }
 
     void AtualizarUI()
@@ -800,5 +1051,5 @@ public class GameManager : MonoBehaviour
     }
 
     static T[] FindAll<T>() where T : Object
-        => GameObject.FindObjectsByType<T>(FindObjectsInactive.Exclude);
+        => GameObject.FindObjectsByType<T>(FindObjectsInactive.Include);
 }

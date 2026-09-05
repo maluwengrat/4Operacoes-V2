@@ -8,7 +8,7 @@ using UnityEngine.UI;
 public class PoderIcones : MonoBehaviour
 {
     [Header("Botões dos poderes")]
-    public Button[] btnPoderes; // arraste os botões diretamente
+    public Button[] btnPoderes; // arraste os botões diretamente (9 no total agora)
 
     void Start()
     {
@@ -20,7 +20,9 @@ public class PoderIcones : MonoBehaviour
         CriarIconeAcelerador(),
         CriarIconeEscudo(),
         CriarIconeCongelar(),
-        CriarIconeDica()
+        CriarIconeDica(),
+        CriarIconeEscudoSimples(),
+        CriarIconeTempoLento()
         };
 
         for (int i = 0; i < btnPoderes.Length && i < icones.Length; i++)
@@ -282,6 +284,77 @@ public class PoderIcones : MonoBehaviour
         Pixel(p, 3, 13, Color.white); Pixel(p, 12, 13, Color.white);
         Pixel(p, 2, 11, Color.white); Pixel(p, 13, 11, Color.white);
         Pixel(p, 8, 15, lampada); Pixel(p, 8, 14, lampada);
+
+        return CriarSprite(p);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Ícone 7 — Escudo simples (um único escudo, azul-claro)
+    // ─────────────────────────────────────────────────────────────────
+    Sprite CriarIconeEscudoSimples()
+    {
+        Color[] p = Canvas();
+        Color corpo = new Color(0.3f, 0.8f, 1f);
+        Color borda = new Color(0.1f, 0.5f, 0.9f);
+        Color brilho = Color.white;
+
+        // Contorno do escudo (formato de brasão)
+        Rect(p, 3, 8, 10, 5, borda);
+        Rect(p, 4, 13, 8, 1, borda);
+        Pixel(p, 8, 3, borda); Pixel(p, 7, 3, borda);
+        Pixel(p, 3, 4, borda); Pixel(p, 12, 4, borda);
+        Pixel(p, 2, 6, borda); Pixel(p, 13, 6, borda);
+
+        // Preenchimento interno
+        Rect(p, 4, 9, 8, 4, corpo);
+        Rect(p, 5, 5, 6, 4, corpo);
+
+        // Ponta inferior do escudo
+        Pixel(p, 7, 7, corpo); Pixel(p, 8, 7, corpo);
+        Pixel(p, 6, 6, corpo); Pixel(p, 9, 6, corpo);
+
+        // Brilho central (estrela pequena)
+        Pixel(p, 7, 9, brilho); Pixel(p, 8, 9, brilho);
+        Pixel(p, 7, 10, brilho); Pixel(p, 8, 10, brilho);
+
+        return CriarSprite(p);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Ícone 8 — Tempo Lento (ampulheta roxa)
+    // ─────────────────────────────────────────────────────────────────
+    Sprite CriarIconeTempoLento()
+    {
+        Color[] p = Canvas();
+        Color estrutura = new Color(0.4f, 0.15f, 0.6f); // roxo escuro (tampos)
+        Color vidro = new Color(0.6f, 0.3f, 0.9f);      // roxo médio (contorno)
+        Color areia = new Color(0.85f, 0.6f, 1f);       // roxo claro (areia)
+
+        // Tampo superior e inferior
+        Rect(p, 3, 14, 10, 1, estrutura);
+        Rect(p, 4, 13, 8, 1, estrutura);
+        Rect(p, 3, 1, 10, 1, estrutura);
+        Rect(p, 4, 2, 8, 1, estrutura);
+
+        // Laterais convergindo pro centro (formato de ampulheta)
+        for (int i = 0; i < 5; i++)
+        {
+            Pixel(p, 4 + i, 12 - i, vidro);
+            Pixel(p, 11 - i, 12 - i, vidro);
+            Pixel(p, 4 + i, 3 + i, vidro);
+            Pixel(p, 11 - i, 3 + i, vidro);
+        }
+
+        // Areia no compartimento de cima (ainda não caiu toda)
+        Rect(p, 6, 10, 4, 2, areia);
+        Rect(p, 7, 9, 2, 1, areia);
+
+        // Fio de areia caindo pelo meio
+        Pixel(p, 7, 8, areia); Pixel(p, 8, 8, areia);
+
+        // Areia acumulada embaixo (mais cheia, já caiu)
+        Rect(p, 5, 4, 6, 3, areia);
+        Rect(p, 6, 7, 4, 1, areia);
 
         return CriarSprite(p);
     }

@@ -1,0 +1,426 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\managers\\monitorsalamanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\managers\\monitorsalamanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\managers\\firebasemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\managers\\firebasemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\managers\\tutorialmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\managers\\tutorialmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\managers\\podermanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\managers\\podermanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\others\\playercontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\others\\playercontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\managers\\salaesperamanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\managers\\salaesperamanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\managers\\salamanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\managers\\salamanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\others\\itemalunosala.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\others\\itemalunosala.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\others\\enemy.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\others\\enemy.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\managers\\gamemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\managers\\gamemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\others\\tutorialanima\u00E7\u00E3o.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\others\\tutorialanima\u00E7\u00E3o.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\managers\\gameresultsender.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\managers\\gameresultsender.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\managers\\tooltipmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\managers\\tooltipmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\others\\selecionaralvoui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\others\\selecionaralvoui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\managers\\vidasmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\managers\\vidasmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\background\\pixelbackground.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\background\\pixelbackground.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\background\\backgroundmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\background\\backgroundmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\others\\tooltippoder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\others\\tooltippoder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\others\\mobileui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\others\\mobileui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\managers\\efeitosmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\managers\\efeitosmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\others\\destaquevisual.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\others\\destaquevisual.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\others\\seguirnave.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\others\\seguirnave.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\others\\iconepoder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\others\\iconepoder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\managers\\feedbackmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\managers\\feedbackmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|c:\\users\\maria\\4opera\u00E7\u00F5es - v2\\assets\\scripts\\others\\criarnave.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\others\\criarnave.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 5,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "FirebaseManager.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\FirebaseManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Managers\\FirebaseManager.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\FirebaseManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Managers\\FirebaseManager.cs",
+              "ViewState": "AgIAABcEAAAAAAAAAAAgwDAEAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T00:01:07.581Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "TooltipManager.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\TooltipManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Managers\\TooltipManager.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\TooltipManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Managers\\TooltipManager.cs",
+              "ViewState": "AgIAAH4AAAAAAAAAAAAAAJYAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-28T21:10:29.601Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "PoderManager.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\PoderManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Managers\\PoderManager.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\PoderManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Managers\\PoderManager.cs",
+              "ViewState": "AgIAALkAAAAAAAAAAAAAAMMAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-24T22:29:56.315Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "TutorialManager.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\TutorialManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Managers\\TutorialManager.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\TutorialManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Managers\\TutorialManager.cs",
+              "ViewState": "AgIAAPcAAAAAAAAAAAAswAYBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-28T21:37:00.048Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "TutorialAnima\u00E7\u00E3o.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\TutorialAnima\u00E7\u00E3o.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Others\\TutorialAnima\u00E7\u00E3o.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\TutorialAnima\u00E7\u00E3o.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Others\\TutorialAnima\u00E7\u00E3o.cs",
+              "ViewState": "AgIAADwBAAAAAAAAAAAgwFQBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-30T15:30:47.234Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "MonitorSalaManager.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\MonitorSalaManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Managers\\MonitorSalaManager.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\MonitorSalaManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Managers\\MonitorSalaManager.cs",
+              "ViewState": "AgIAAA8BAAAAAAAAAAAAwB4BAABQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T22:17:48.039Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "SalaEsperaManager.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\SalaEsperaManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Managers\\SalaEsperaManager.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\SalaEsperaManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Managers\\SalaEsperaManager.cs",
+              "ViewState": "AgIAAF0AAAAAAAAAAAAkwHYAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T22:18:13.592Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "PlayerController.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\PlayerController.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Others\\PlayerController.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\PlayerController.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Others\\PlayerController.cs",
+              "ViewState": "AgIAAB0BAAAAAAAAAAAQwDUBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-24T17:17:32.42Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "SalaManager.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\SalaManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Managers\\SalaManager.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\SalaManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Managers\\SalaManager.cs",
+              "ViewState": "AgIAABsBAAAAAAAAAAAowDUBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T22:18:04.231Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "ItemAlunoSala.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\ItemAlunoSala.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Others\\ItemAlunoSala.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\ItemAlunoSala.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Others\\ItemAlunoSala.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAowBoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-01T23:44:29.255Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "VidasManager.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\VidasManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Managers\\VidasManager.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\VidasManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Managers\\VidasManager.cs",
+              "ViewState": "AgIAACYAAAAAAAAAAAAAAD0AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-13T00:50:22.755Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "Enemy.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\Enemy.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Others\\Enemy.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\Enemy.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Others\\Enemy.cs",
+              "ViewState": "AgIAACsAAAAAAAAAAAAowEUAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-24T22:19:44.09Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "GameManager.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\GameManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Managers\\GameManager.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\GameManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Managers\\GameManager.cs",
+              "ViewState": "AgIAAF4DAAAAAAAAAAAowHgDAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-24T21:56:53.806Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "GameResultSender.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\GameResultSender.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Managers\\GameResultSender.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\GameResultSender.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Managers\\GameResultSender.cs",
+              "ViewState": "AgIAAIgAAAAAAAAAAAAwwKEAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-24T21:56:22.567Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "SelecionarAlvoUI.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\SelecionarAlvoUI.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Others\\SelecionarAlvoUI.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\SelecionarAlvoUI.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Others\\SelecionarAlvoUI.cs",
+              "ViewState": "AgIAAHYAAAAAAAAAAAAgwI4AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-04T00:39:20.005Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "MobileUi.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\MobileUi.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Others\\MobileUi.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\MobileUi.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Others\\MobileUi.cs",
+              "ViewState": "AgIAAE8BAAAAAAAAAAAAwGgBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-24T21:54:04.024Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "TooltipPoder.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\TooltipPoder.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Others\\TooltipPoder.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\TooltipPoder.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Others\\TooltipPoder.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAwB8AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-28T20:37:10.334Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "BackgroundManager.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Background\\BackgroundManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Background\\BackgroundManager.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Background\\BackgroundManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Background\\BackgroundManager.cs",
+              "ViewState": "AgIAAFgAAAAAAAAAAAAqwG8AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-28T21:29:14.802Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "PixelBackground.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Background\\PixelBackground.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Background\\PixelBackground.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Background\\PixelBackground.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Background\\PixelBackground.cs",
+              "ViewState": "AgIAAEYAAAAAAAAAAAAxwF8AAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-22T14:57:17.01Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "EfeitosManager.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\EfeitosManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Managers\\EfeitosManager.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\EfeitosManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Managers\\EfeitosManager.cs",
+              "ViewState": "AgIAADsDAAAAAAAAAAAcwE8DAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-28T21:28:43.105Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "IconePoder.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\IconePoder.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Others\\IconePoder.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\IconePoder.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Others\\IconePoder.cs",
+              "ViewState": "AgIAAE8BAAAAAAAAAAAAwFUBAAArAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-28T20:34:26.8Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "DestaqueVisual.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\DestaqueVisual.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Others\\DestaqueVisual.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\DestaqueVisual.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Others\\DestaqueVisual.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-28T21:55:02.402Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "SeguirNave.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\SeguirNave.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Others\\SeguirNave.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\SeguirNave.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Others\\SeguirNave.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-28T22:02:15.208Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "FeedbackManager.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\FeedbackManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Managers\\FeedbackManager.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Managers\\FeedbackManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Managers\\FeedbackManager.cs",
+              "ViewState": "AgIAAPcAAAAAAAAAAADwvw8BAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-24T22:19:35.086Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 24,
+              "Title": "CriarNave.cs",
+              "DocumentMoniker": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\CriarNave.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Others\\CriarNave.cs",
+              "ToolTip": "C:\\Users\\maria\\4Opera\u00E7\u00F5es - V2\\Assets\\Scripts\\Others\\CriarNave.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Others\\CriarNave.cs",
+              "ViewState": "AgIAACYAAAAAAAAAAAAqwEAAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-22T15:34:37.087Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -63,15 +63,31 @@ public class PixelBackground : MonoBehaviour
         _tex.Apply();
     }
 
+    [Header("Performance")]
+    public float drawInterval = 0.05f; // redesenha ~20x por segundo, em vez de todo frame
+
+    private float _drawTimer = 0f;
+
     private void Update()
     {
         _time += Time.unscaledDeltaTime * animSpeed;
-        Draw();
-        if (_tex != null && _pixels != null)
+
+        float intervaloEfetivo = backgroundType == BackgroundType.Stage2_Cave
+            ? Mathf.Max(drawInterval, 0.08f) // caverna é mais pesada, redesenha um pouco menos
+            : drawInterval;
+
+        _drawTimer += Time.unscaledDeltaTime;
+        if (_drawTimer >= intervaloEfetivo)
         {
-            _tex.SetPixels32(_pixels);
-            _tex.Apply();
+            _drawTimer = 0f;
+            Draw();
+            if (_tex != null && _pixels != null)
+            {
+                _tex.SetPixels32(_pixels);
+                _tex.Apply();
+            }
         }
+
         if (Camera.main != null)
         {
             Vector3 camPos = Camera.main.transform.position;
@@ -721,7 +737,8 @@ public class PixelBackground : MonoBehaviour
             for (int dy = -5; dy <= ch + 5; dy++)
                 for (int dx = -6; dx <= 6; dx++)
                 {
-                    float d = Mathf.Sqrt(dx * dx + Mathf.Pow(dy - ch / 2f, 2));
+                    float diff = dy - ch / 2f;
+                    float d = Mathf.Sqrt(dx * dx + diff * diff);
                     float fade = Mathf.Clamp01(1f - d / 8f) * pulse * 0.4f;
                     if (fade > 0.05f)
                         SetPixel(crx + dx, cry + dy, Lerp32(GetPixel(crx + dx, cry + dy), cg, fade));

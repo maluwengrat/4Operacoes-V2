@@ -8,6 +8,14 @@ public class Enemy : MonoBehaviour
     public float speed = 1.5f;
 
     private float limitaY = -3.5f;
+    private float fixedX;
+    private bool temColunaFixa = false;
+
+    public void SetColunaFixa(float x)
+    {
+        fixedX = x;
+        temColunaFixa = true;
+    }
 
     void Start()
     {
@@ -17,11 +25,8 @@ public class Enemy : MonoBehaviour
             sr.sortingOrder = 15;
             sr.sortingLayerName = "Default";
         }
-
         if (numberLabel != null)
-        {
             numberLabel.sortingOrder = 16;
-        }
     }
 
     void Update()
@@ -29,7 +34,9 @@ public class Enemy : MonoBehaviour
         transform.Translate(Vector2.down * speed * Time.deltaTime);
         if (transform.position.y <= limitaY)
         {
-            float novoX = Random.Range(-6f, 6f);
+            float variacaoX = Random.Range(-0.3f, 0.3f);
+            float novoX = temColunaFixa ? fixedX + variacaoX : Random.Range(-6f, 6f);
+            novoX = Mathf.Clamp(novoX, -6.5f, 6.5f);
             transform.position = new Vector3(novoX, 4f, 0);
         }
     }
@@ -37,8 +44,7 @@ public class Enemy : MonoBehaviour
     public void SetNumber(int number)
     {
         myNumber = number;
-        if (numberLabel != null)
-            numberLabel.text = number.ToString();
+        numberLabel.text = number.ToString();
     }
 
     void OnTriggerEnter2D(Collider2D other)

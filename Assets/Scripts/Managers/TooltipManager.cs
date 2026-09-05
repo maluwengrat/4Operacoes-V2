@@ -1,7 +1,8 @@
 using System.Collections;
-using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class TooltipManager : MonoBehaviour
 {
@@ -63,7 +64,6 @@ public class TooltipManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────
     // Mostrar tooltip
     // ─────────────────────────────────────────────────────────────────
-
     public void MostrarTooltip(string nome, string descricao, Transform alvo)
     {
         if (painelTooltip == null) return;

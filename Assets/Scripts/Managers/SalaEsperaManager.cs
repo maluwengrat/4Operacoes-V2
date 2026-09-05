@@ -55,7 +55,7 @@ public class SalaEsperaManager : MonoBehaviour
             textoCodigoEspera.text = "SALA: " + codigoSala;
 
         if (textoEspera != null)
-            textoEspera.text = "Aguardando o professor\niniciar a partida...";
+            textoEspera.text = "Aguardando o professor\n iniciar a partida...";
     }
 
     void FecharEspera()
@@ -82,14 +82,26 @@ public class SalaEsperaManager : MonoBehaviour
         string codigo = FirebaseManager.instance.codigoSalaAtual;
         if (string.IsNullOrEmpty(codigo)) yield break;
 
-        string url = "https://mathshooter-6c0f7-default-rtdb.firebaseio.com"
+        // CORRIGIDO: essa URL não tinha o token de autenticação (?auth=...),
+        // então toda checagem de status era barrada pelas regras do Firebase
+        // ("auth != null") e falhava em silêncio — o aluno nunca detectava
+        // que o professor tinha iniciado a partida. Agora usamos o mesmo
+        // helper que o resto do projeto usa pra anexar o auth corretamente.
+        string urlSemAuth = "https://mathshooter-6c0f7-default-rtdb.firebaseio.com"
                    + "/salas/" + codigo + "/status.json";
+        string url = FirebaseManager.instance.ConstruirUrlComAuth(urlSemAuth);
 
         var req = UnityEngine.Networking.UnityWebRequest.Get(url);
         yield return req.SendWebRequest();
 
         if (req.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
+        {
+            // DIAGNÓSTICO: agora loga se a checagem falhar, em vez de
+            // falhar em silêncio como antes.
+            Debug.LogWarning("[SalaEsperaManager] Falha ao checar status da sala: "
+                + req.error + " | HTTP " + req.responseCode);
             yield break;
+        }
 
         string status = req.downloadHandler.text.Replace("\"", "").Trim();
 

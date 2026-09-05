@@ -38,6 +38,7 @@ public class SalaManager : MonoBehaviour
     [Header("Painel Aluno")]
     public GameObject painelAluno;
     public TMP_InputField inputCodigoSala;
+    public TMP_InputField inputNomeAluno; // novo: nome digitado ou pré-preenchido da URL
     public Button btnEntrarSala;
 
     [Header("Painel Espera")]
@@ -155,9 +156,23 @@ public class SalaManager : MonoBehaviour
     // Escolha de perfil
     // ─────────────────────────────────────────────────────────────────
 
+    // Chamado pelo TutorialManager quando o aluno pula ou termina o tutorial do Turma
+    public void ContinuarParaPainelAluno()
+    {
+        if (inputNomeAluno != null && FirebaseManager.instance != null)
+        {
+            string nomeAtual = FirebaseManager.instance.nomeJogador;
+            inputNomeAluno.text = (nomeAtual == "Jogador") ? "" : nomeAtual;
+        }
+        IrParaPainel(painelAluno);
+    }
+
     void EscolherAluno()
     {
-        IrParaPainel(painelAluno);
+        if (TutorialManager.instance != null)
+            TutorialManager.instance.PerguntarTutorialTurma();
+        else
+            ContinuarParaPainelAluno();
     }
 
     void EscolherProfessor()
@@ -188,11 +203,6 @@ public class SalaManager : MonoBehaviour
             inputSenha.text = "";
         }
     }
-
-    // ─────────────────────────────────────────────────────────────────
-    // Criar sala (professor)
-    // ─────────────────────────────────────────────────────────────────
-
     void CriarSalaClicked()
     {
         if (textoStatusSala != null) textoStatusSala.text = "Criando sala...";
@@ -220,7 +230,6 @@ public class SalaManager : MonoBehaviour
             }
         });
     }
-
     void IniciarJogoTurma()
     {
         if (string.IsNullOrEmpty(FirebaseManager.instance.codigoSalaAtual))
@@ -267,7 +276,19 @@ public class SalaManager : MonoBehaviour
 
         if (textoStatusSala != null) textoStatusSala.text = "Entrando na sala...";
 
-        FirebaseManager.instance.EntrarNaSala(codigo, (sucesso) =>
+        if (inputNomeAluno != null && !string.IsNullOrEmpty(inputNomeAluno.text.Trim()))
+        {
+            string nomeDigitado = inputNomeAluno.text.Trim();
+            if (nomeDigitado.Length > 20) nomeDigitado = nomeDigitado.Substring(0, 20);
+            FirebaseManager.instance.nomeJogador = nomeDigitado;
+        }
+        else if (!string.IsNullOrEmpty(FirebaseManager.instance.nomeJogador)
+                 && FirebaseManager.instance.nomeJogador.Length > 20)
+        {
+            FirebaseManager.instance.nomeJogador = FirebaseManager.instance.nomeJogador.Substring(0, 20);
+        }
+
+        FirebaseManager.instance.EntrarNaSala(codigo, (sucesso, mensagemErro) =>
         {
             if (sucesso)
             {
@@ -282,22 +303,8 @@ public class SalaManager : MonoBehaviour
             else
             {
                 if (textoStatusSala != null)
-                    textoStatusSala.text = "Sala não encontrada.\nVerifique o código e tente novamente.";
+                    textoStatusSala.text = mensagemErro;
             }
-            FirebaseManager.instance.IniciarEsperaDeJogo(() =>
-            {
-                salaPanel.SetActive(false);
-                DesativarTodosPaineis();
-
-                // Inicia escuta de poderes do adversário
-                FirebaseManager.instance.IniciarEscutaPoderes((tipoPoder) =>
-                {
-                    if (PoderManager.instance != null)
-                        PoderManager.instance.ReceberPoderDoAdversario(tipoPoder);
-                });
-
-                GameManager.instance.IniciarJogo();
-            });
         });
     }
 }
