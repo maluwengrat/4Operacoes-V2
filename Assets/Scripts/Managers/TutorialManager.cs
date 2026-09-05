@@ -137,7 +137,9 @@ public class TutorialManager : MonoBehaviour
             {
                 bool tecla = Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.RightArrow)
                           || Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.D);
-                if (tecla) acaoRealizada = true;
+                bool mobile = MobileUI.instance != null
+                           && (MobileUI.instance.PressionandoEsquerda || MobileUI.instance.PressionandoDireita);
+                if (tecla || mobile) acaoRealizada = true;
             }
             yield return null;
         }
@@ -261,6 +263,9 @@ public class TutorialManager : MonoBehaviour
         MostrarInstrucao("Acerte em sequência para\nCARREGAR PODERES!\n\n(toque para continuar)", refPoderes, offsetPoderes);
         yield return EsperarToque();
 
+        MostrarInstrucao("Passe o mouse ou pressione\nsobre um poder para ver\no que ele faz!\n\n(toque para continuar)", refPoderes, offsetPoderes);   // NOVO
+        yield return EsperarToque();
+
         MostrarInstrucao("Você está pronto!\nDeseja continuar para o jogo?\n\n(toque para continuar)", null);
         yield return EsperarToque();
 
@@ -314,6 +319,9 @@ public class TutorialManager : MonoBehaviour
         yield return EsperarToque();
 
         MostrarInstrucao("Já os OFENSIVOS (Inversão,\nTempestade, Cronômetro,\nDistorção, Congelar) você usa\nESCOLHENDO um adversário\nda turma para atingir!\n\n(toque para continuar)", refPoderes, offsetPoderes);
+        yield return EsperarToque();
+
+        MostrarInstrucao("Lembre-se: passe o mouse ou\npressione sobre qualquer poder\npara ver o que ele faz!\n\n(toque para continuar)", refPoderes, offsetPoderes);   // NOVO
         yield return EsperarToque();
 
         MostrarInstrucao("Treino concluído! 🚀\n\nAgora digite o CÓDIGO da sala\nque o professor passou\npara entrar na turma de verdade.\n\n(toque para continuar)", null);

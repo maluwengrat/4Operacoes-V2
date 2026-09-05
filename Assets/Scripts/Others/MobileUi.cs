@@ -38,13 +38,13 @@ public class MobileUI : MonoBehaviour
     private bool isMobile;
     private PlayerController player;
 
-    // devicePixelRatio vindo do JavaScript (window.devicePixelRatio)
-    // Valor padrão 1 para desktop; celulares costumam ter 2, 3 ou mais
     private float devicePixelRatio = 1f;
 
     private bool pressEsq = false;
     private bool pressDir = false;
     private bool pressAtira = false;
+    public bool PressionandoEsquerda => pressEsq;   
+    public bool PressionandoDireita => pressDir;
 
     private int touchIdEsq = -1;
     private int touchIdDir = -1;
