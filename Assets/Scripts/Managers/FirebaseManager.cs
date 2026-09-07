@@ -326,57 +326,49 @@ public class FirebaseManager : MonoBehaviour
         callback(lista);
     }
 
-    List<DadosJogador> ParsearRanking(string json)
+
+
+List<DadosJogador> ParsearRanking(string json)
+{
+    var lista = new List<DadosJogador>();
+    if (json == "null" || string.IsNullOrEmpty(json)) return lista;
+
+    // Guarda o melhor resultado de cada jogador (por userId)
+    var melhorPorJogador = new Dictionary<string, DadosJogador>();
+
+    // Nível 1: cada userId
+    foreach (var (userId, blocoUsuario) in ExtrairObjetosComChave(json))
     {
-        var lista = new List<DadosJogador>();
-        if (json == "null" || string.IsNullOrEmpty(json)) return lista;
-
-        int i = 0;
-        while (i < json.Length)
+        // Nível 2: cada fase dentro do userId
+        foreach (var (faseChave, blocoFase) in ExtrairObjetosComChave(blocoUsuario))
         {
-            int abre = json.IndexOf('{', i);
-            if (abre < 0) break;
+            if (!blocoFase.Contains("\"nome\"")) continue;
 
-            int nivel = 1;
-            int fim = abre + 1;
-            while (fim < json.Length && nivel > 0)
+            try
             {
-                if (json[fim] == '{') nivel++;
-                else if (json[fim] == '}') nivel--;
-                fim++;
+                DadosJogador d = new DadosJogador();
+                d.userId = userId;
+                d.nome = ExtrairValorString(blocoFase, "nome");
+                d.pontos = ExtrairValorInt(blocoFase, "pontos");
+                d.acertos = ExtrairValorInt(blocoFase, "acertos");
+                d.erros = ExtrairValorInt(blocoFase, "erros");
+                d.aproveitamento = ExtrairValorInt(blocoFase, "aproveitamento");
+                d.fase = ExtrairValorInt(blocoFase, "fase");
+
+                if (string.IsNullOrEmpty(d.nome)) continue;
+
+                if (!melhorPorJogador.ContainsKey(userId) || d.pontos > melhorPorJogador[userId].pontos)
+                    melhorPorJogador[userId] = d;
             }
-
-            string bloco = json.Substring(abre, fim - abre);
-
-            if (bloco.Contains("\"nome\""))
-            {
-                try
-                {
-                    DadosJogador d = new DadosJogador();
-                    d.nome = ExtrairValorString(bloco, "nome");
-                    d.pontos = ExtrairValorInt(bloco, "pontos");
-                    d.acertos = ExtrairValorInt(bloco, "acertos");
-                    d.erros = ExtrairValorInt(bloco, "erros");
-                    d.aproveitamento = ExtrairValorInt(bloco, "aproveitamento");
-                    d.fase = ExtrairValorInt(bloco, "fase");
-
-                    if (!string.IsNullOrEmpty(d.nome))
-                        lista.Add(d);
-                }
-                catch { }
-            }
-
-            i = fim;
+            catch { }
         }
-
-        return lista;
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // Helpers JSON
-    // ─────────────────────────────────────────────────────────────────
+    lista.AddRange(melhorPorJogador.Values);
+    return lista;
+}
 
-    string ExtrairValorString(string json, string chave)
+string ExtrairValorString(string json, string chave)
     {
         // Busca só pela chave + ":", sem exigir a aspas logo em seguida —
         // o Google às vezes retorna JSON "pretty" com espaço/quebra de linha

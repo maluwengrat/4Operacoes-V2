@@ -13,6 +13,14 @@ public class PlayerController : MonoBehaviour
     private bool btnDireitoPressionado = false;
     private bool btnAtirouAgora = false;
 
+    // NOVO: trava temporária de tiro — usada pelo poder "Congelar" quando
+    // recebido de um adversário na Turma (antes, "Congelar" parava os
+    // inimigos de quem recebia, o que na prática AJUDAVA em vez de
+    // atrapalhar; agora trava a própria mira, que é um efeito realmente
+    // ofensivo). O movimento da nave continua funcionando normalmente —
+    // só o disparo fica bloqueado.
+    private bool tiroTravado = false;
+
     private float limiteEsq;
     private float limiteDirMin;
 
@@ -74,6 +82,7 @@ public class PlayerController : MonoBehaviour
         btnEsquerdoPressionado = false;
         btnDireitoPressionado = false;
         btnAtirouAgora = false;
+        tiroTravado = false; // NOVO: garante que uma trava não sobreviva pra próxima partida
     }
 
     void Update()
@@ -231,6 +240,10 @@ public class PlayerController : MonoBehaviour
         bool atirarBotao = btnAtirouAgora;
         btnAtirouAgora = false;
 
+        // NOVO: mira travada pelo poder Congelar recebido — consome o
+        // input normalmente (linha acima) mas não deixa o tiro sair.
+        if (tiroTravado) return;
+
         if ((atirarTeclado || atirarBotao) && timerTiro <= 0f)
         {
             Atirar();
@@ -271,6 +284,23 @@ public class PlayerController : MonoBehaviour
     }
 
     public bool TemEscudo() => escudoAtivo;
+
+    // NOVO: trava/destrava o disparo por um tempo determinado. Chame com
+    // duracao <= 0 pra travar indefinidamente (não usado hoje, mas fica
+    // disponível). Chamar de novo enquanto já travado reinicia a contagem.
+    public void TravarTiro(float duracao)
+    {
+        CancelInvoke(nameof(DestravarTiro));
+        tiroTravado = true;
+        if (duracao > 0f) Invoke(nameof(DestravarTiro), duracao);
+    }
+
+    void DestravarTiro()
+    {
+        tiroTravado = false;
+    }
+
+    public bool TiroTravado() => tiroTravado;
 
     void CriarEscudoVisual()
     {

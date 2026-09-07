@@ -3325,7 +3325,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TooltipPoder
   nomePoder: 'Congelar '
   descricaoPoder: Congela seus inimigos por 4s!
-  descricaoPoderTurma: "Congela os inimigos do advers\xE1rio por 4s!"
+  descricaoPoderTurma: "Trava a mira do advers\xE1rio por 4 segundos, impedindo que
+    ele atire."
 --- !u!225 &215833171
 CanvasGroup:
   m_ObjectHideFlags: 0

@@ -59,20 +59,6 @@ public class PoderManager : MonoBehaviour
     // logo abaixo pro modo Turma, onde o ritmo é bem mais lento.
     private int[] streakNecessario = { 8, 14, 9, 9, 9, 10, 6, 7, 9 };
 
-    // NOVO: limiares bem menores pro modo Turma. Lá quem manda no ritmo é
-    // o professor (uma pergunta nova só sai quando ele clica em "Próxima
-    // Pergunta"), então uma sequência de 8-14 acertos pode levar a aula
-    // inteira pra se formar — e um único erro no meio (que tira streak)
-    // praticamente reseta o progresso. Reduzindo os limiares pra ~1/3,
-    // um poder carrega depois de poucas perguntas seguidas certas, o que
-    // é mais compatível com um quiz de sala de aula (tipicamente
-    // dezenas de perguntas no total, não centenas).
-    private int[] streakNecessarioTurma = { 3, 5, 3, 3, 3, 4, 2, 3, 3 };
-
-    // Escolhe o array de limiares certo conforme o modo atual, sem precisar
-    // duplicar a lógica de RegistrarAcerto/RegistrarErro pra cada modo.
-    private int[] StreakNecessarioAtivo =>
-        GameManager.modoAtual == GameManager.ModoJogo.Turma ? streakNecessarioTurma : streakNecessario;
 
     private string[] nomesPoderes = {
         "Inversão", "Tempestade", "Cronômetro",
@@ -149,10 +135,10 @@ public class PoderManager : MonoBehaviour
 
     public void RegistrarAcerto(bool isBoss, float tempoResposta)
     {
-        streakAtual++;
-        int[] limiares = StreakNecessarioAtivo;
+            streakAtual++;
+            int[] limiares = streakNecessario;   // agora sempre o mesmo array, independente do mo
 
-        if (isBoss && streakAtual >= limiares[(int)TipoPoder.Tempestade])
+            if (isBoss && streakAtual >= limiares[(int)TipoPoder.Tempestade])
         {
             CarregarPoder((int)TipoPoder.Tempestade); // ← só carrega, não ativa!
             return;
@@ -666,8 +652,11 @@ public class PoderManager : MonoBehaviour
                 MostrarNotificacao("⚠ Adversário usou Acelerador!");
                 break;
             case "congelar":
-                StartCoroutine(CongelarInimigos(4f));
-                MostrarNotificacao("⚠ Adversário usou Congelar!");
+                {
+                    PlayerController playerAlvo = FindFirstObjectByType<PlayerController>();
+                    if (playerAlvo != null) playerAlvo.TravarTiro(4f);
+                    MostrarNotificacao("⚠ Adversário travou sua mira por 4s!");
+                }
                 break;
         }
     }
