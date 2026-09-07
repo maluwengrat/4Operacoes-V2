@@ -702,6 +702,23 @@ public class PoderManager : MonoBehaviour
         }
     }
 
+    public void ResetarPoderes()
+    {
+        streakAtual = 0;
+        poderAtual = -1;
+        escudoAtivo = false;
+
+        for (int i = 0; i < cooldowns.Length; i++)
+            cooldowns[i] = 0f;
+
+        // Se quiser que os poderes voltem a aparecer "bloqueados/cinza" até
+        // serem conquistados de novo na nova partida, resete também:
+        for (int i = 0; i < poderDesbloqueado.Length; i++)
+            poderDesbloqueado[i] = false;
+
+        AtualizarVisualPoderes();
+    }
+
     void MostrarNotificacao(string msg)
     {
         // No modo Tutorial, quem explica tudo é o TutorialManager via TutorialBalao —

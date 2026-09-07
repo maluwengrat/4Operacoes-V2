@@ -243,9 +243,13 @@ public class GameManager : MonoBehaviour
         if (SoundManager.instance != null) SoundManager.instance.PararMusica();
 
         if (FirebaseManager.instance != null) FirebaseManager.instance.PararTodasEscutasDePartida();
-        if (PoderManager.instance != null)
+        if (PoderManager.instance != null) 
             PoderManager.instance.RegistrarAcerto(turmaPerguntaAtualBoss, Time.time - tempoPerguntaInicio);
-    }
+
+        PoderManager.instance?.ResetarPoderes();   // NOVO
+        PoderManager.instance?.PararEscuta();      // NOVO — já existia o método, mas nada chamava
+    
+}
 
     void MostrarSomente(GameObject painel)
     {
@@ -279,12 +283,17 @@ public class GameManager : MonoBehaviour
         acertosPorFase.Clear();
         totalRespostasPorFase.Clear();
         tempoInicioFase = Time.time;
+        PoderManager.instance?.ResetarPoderes();
 
         AtualizarUI();
         jogoIniciado = true;
         if (BackgroundManager.Instance != null) BackgroundManager.Instance.SetStage(faseAtual);
         if (VidasManager.instance != null) VidasManager.instance.ResetarVidas();
-        if (PoderManager.instance != null) PoderManager.instance.IniciarEscutaSeNecessario();
+
+        if (PoderManager.instance != null) {
+            PoderManager.instance.ResetarPoderes();
+                PoderManager.instance.IniciarEscutaSeNecessario();
+        }
 
         if (modoAtual == ModoJogo.Turma && FirebaseManager.instance != null)
             FirebaseManager.instance.IniciarEscutaEncerramento(SalaEncerradaPeloProfessor);
@@ -762,8 +771,8 @@ public class GameManager : MonoBehaviour
             if (TutorialManager.instance != null && TutorialManager.instance.modoGuiado)
                 TutorialManager.instance.NotificarAcerto();
 
-            if (PoderManager.instance != null)
-                PoderManager.instance.RegistrarAcerto(isBossWave, Time.time - tempoPerguntaInicio);
+            PoderManager.instance?.ResetarPoderes();
+            PoderManager.instance?.PararEscuta();
 
             foreach (var e in FindAll<Enemy>())
                 if (e != null) Destroy(e.gameObject);
