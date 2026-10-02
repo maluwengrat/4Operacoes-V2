@@ -4,6 +4,10 @@ public class MobileUI : MonoBehaviour
 {
     public static MobileUI instance;
 
+    /// <summary>Exposto publicamente para outros scripts (ex.: CampoTextoWebAtivador)
+    /// saberem se o jogo está rodando em mobile, sem duplicar a detecção.</summary>
+    public bool IsMobile => isMobile;
+
     [Header("Teste no Editor")]
     [Tooltip("Marque para simular o modo mobile ao dar Play dentro do Editor da Unity.")]
     [SerializeField] private bool testarComoMobileNoEditor = false;
@@ -43,7 +47,7 @@ public class MobileUI : MonoBehaviour
     private bool pressEsq = false;
     private bool pressDir = false;
     private bool pressAtira = false;
-    public bool PressionandoEsquerda => pressEsq;   
+    public bool PressionandoEsquerda => pressEsq;
     public bool PressionandoDireita => pressDir;
 
     private int touchIdEsq = -1;

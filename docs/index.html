@@ -255,6 +255,12 @@
 			createUnityInstance(canvas, config, (progress) => {
 			}).then((unityInstance) => {
 
+			// ← NOVO: expõe a instância globalmente para o .jslib
+			// (CampoTextoWebBridge.jslib) conseguir chamar SendMessage
+			// de volta pro Unity quando o usuário digita no input HTML
+			// oculto do campo de código da sala.
+			window.unityInstance = unityInstance;
+
 			// Envia se é mobile
 			if (isMobile) {
 			unityInstance.SendMessage("MobileUI", "SetMobileFromJS", "1");
