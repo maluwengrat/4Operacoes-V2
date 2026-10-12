@@ -62,7 +62,18 @@ public class GameManager : MonoBehaviour
 
     private int turmaPerguntaIndex = -1;
     private bool turmaRespondeuAtual = false;
-    private bool turmaPerguntaAtualBoss = false; 
+    private bool turmaPerguntaAtualBoss = false;
+
+    // NOVO: duração do timer na turma (o painel do professor deve usar os mesmos valores)
+    public const float TurmaTempoNormal = 30f;
+    public const float TurmaTempoBoss = 45f;
+
+    // NOVO: true = professor marcou "inserir pergunta manualmente"
+    // Começa true (seguro) até o FirebaseManager chamar DefinirModoManualTurma
+    private bool turmaModoManual = true;
+
+    // NOVO: quantas perguntas automáticas seguidas já entraram desde a última do professor
+    private int turmaAutoContador = 0;
 
     private const int totalEnemies = 5;
     private const int ondasPorFase = 7;
@@ -91,6 +102,12 @@ public class GameManager : MonoBehaviour
     public int GetCorrectAnswer() => correctAnswer;
     public void ResumarJogo() { Time.timeScale = 1f; }
 
+    // NOVO: o FirebaseManager chama isso com o valor da checkbox do professor
+    public void DefinirModoManualTurma(bool manual)
+    {
+        turmaModoManual = manual;
+    }
+
     public void ReducirTimer(float segundos)
     {
         timerOnda -= segundos;
@@ -100,7 +117,7 @@ public class GameManager : MonoBehaviour
 
     void SalaEncerradaPeloProfessor()
     {
-        if (!jogoIniciado) return; 
+        if (!jogoIniciado) return;
 
         if (FeedbackManager.instance != null)
             FeedbackManager.instance.MostrarMensagem("O professor encerrou a sala.", new Color(1f, 0.3f, 0.1f));
@@ -126,12 +143,12 @@ public class GameManager : MonoBehaviour
         btnSolo.onClick.AddListener(() =>
         {
             GameManager.modoAtual = ModoJogo.Solo;
-            MostrarSomente(null); 
+            MostrarSomente(null);
 
             if (TutorialManager.instance != null)
                 TutorialManager.instance.PerguntarTutorialSolo();
             else
-                IniciarJogo(); 
+                IniciarJogo();
         });
 
         btnTurma.onClick.AddListener(() =>
@@ -180,6 +197,13 @@ public class GameManager : MonoBehaviour
 
             if (!timerPausadoExterno && timerOnda <= 0f)
             {
+                // Na turma o tempo esgotado não tira vida nem dá game over
+                if (modoAtual == ModoJogo.Turma)
+                {
+                    TurmaTempoEsgotado();
+                    return;
+                }
+
                 timerAtivo = false;
                 timerText.gameObject.SetActive(false);
                 foreach (var e in FindAll<Enemy>()) Destroy(e.gameObject);
@@ -221,6 +245,7 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 1f;
 
         modoAtual = ModoJogo.Solo;
+        turmaAutoContador = 0; // NOVO
 
         jogoIniciado = false;
         timerAtivo = false;
@@ -243,13 +268,12 @@ public class GameManager : MonoBehaviour
         if (SoundManager.instance != null) SoundManager.instance.PararMusica();
 
         if (FirebaseManager.instance != null) FirebaseManager.instance.PararTodasEscutasDePartida();
-        if (PoderManager.instance != null) 
+        if (PoderManager.instance != null)
             PoderManager.instance.RegistrarAcerto(turmaPerguntaAtualBoss, Time.time - tempoPerguntaInicio);
 
-        PoderManager.instance?.ResetarPoderes();   // NOVO
-        PoderManager.instance?.PararEscuta();      // NOVO — já existia o método, mas nada chamava
-    
-}
+        PoderManager.instance?.ResetarPoderes();
+        PoderManager.instance?.PararEscuta();
+    }
 
     void MostrarSomente(GameObject painel)
     {
@@ -290,9 +314,10 @@ public class GameManager : MonoBehaviour
         if (BackgroundManager.Instance != null) BackgroundManager.Instance.SetStage(faseAtual);
         if (VidasManager.instance != null) VidasManager.instance.ResetarVidas();
 
-        if (PoderManager.instance != null) {
+        if (PoderManager.instance != null)
+        {
             PoderManager.instance.ResetarPoderes();
-                PoderManager.instance.IniciarEscutaSeNecessario();
+            PoderManager.instance.IniciarEscutaSeNecessario();
         }
 
         if (modoAtual == ModoJogo.Turma && FirebaseManager.instance != null)
@@ -308,6 +333,7 @@ public class GameManager : MonoBehaviour
     {
         turmaPerguntaIndex = -1;
         turmaRespondeuAtual = false;
+        turmaAutoContador = 0; // NOVO
         timerAtivo = false;
         timerText.gameObject.SetActive(false);
         questionText.gameObject.SetActive(true);
@@ -324,9 +350,13 @@ public class GameManager : MonoBehaviour
     {
         if (!jogoIniciado || index == turmaPerguntaIndex) return;
 
+        // NOVO: a pergunta do professor substitui qualquer automática pendente
+        CancelInvoke(nameof(ProximaPerguntaAutomaticaTurma));
+        turmaAutoContador = 0;
+
         turmaPerguntaIndex = index;
         turmaRespondeuAtual = false;
-        turmaPerguntaAtualBoss = boss; 
+        turmaPerguntaAtualBoss = boss;
 
         if (fase != faseAtual)
         {
@@ -357,9 +387,120 @@ public class GameManager : MonoBehaviour
         tempoInicioQuestao = Time.time;
 
         AtualizarUI();
+        IniciarTimerTurma(boss);
 
         float velocidade = boss ? (0.8f + faseAtual * 0.15f) : (0.6f + faseAtual * 0.15f);
         SpawnInimigosComNumeros(velocidade);
+    }
+
+    // Liga o timer da turma (boss tem mais tempo)
+    void IniciarTimerTurma(bool boss)
+    {
+        tempoLentoAtivo = false;
+        tempoLentoTimer = 0f;
+        timerOnda = boss ? TurmaTempoBoss : TurmaTempoNormal; // ALTERADO: usa as constantes
+        timerAtivo = true;
+        timerText.gameObject.SetActive(true);
+        AtualizarTimerUI();
+    }
+
+    // ALTERADO: o timer zerou
+    void TurmaTempoEsgotado()
+    {
+        timerAtivo = false;
+        timerText.gameObject.SetActive(false);
+        foreach (var e in FindAll<Enemy>()) if (e != null) Destroy(e.gameObject);
+
+        // Trava: a partir daqui o aluno não pode mais responder essa pergunta
+        bool naoRespondeu = !turmaRespondeuAtual;
+        turmaRespondeuAtual = true;
+
+        // Sem pontos nesta rodada, mas sem penalidade (nada de vida, RegistrarErro etc.)
+        if (naoRespondeu && FeedbackManager.instance != null)
+            FeedbackManager.instance.MostrarMensagem("TEMPO ESGOTADO! Sem pontos nesta rodada.", new Color(1f, 0.3f, 0.1f));
+
+        if (turmaModoManual)
+        {
+            // Professor controla: fica esperando a próxima pergunta dele
+            questionText.gameObject.SetActive(true);
+            if (bossQuestionText != null) bossQuestionText.gameObject.SetActive(false);
+            questionText.text = "Tempo encerrado. Aguardando o professor...";
+        }
+        else
+        {
+            // Automático: entra a próxima pergunta sozinha
+            Invoke(nameof(ProximaPerguntaAutomaticaTurma), 1.5f);
+        }
+    }
+
+    // ALTERADO: pergunta automática igual para todos os alunos
+    void ProximaPerguntaAutomaticaTurma()
+    {
+        if (!jogoIniciado || modoAtual != ModoJogo.Turma) return;
+        if (turmaModoManual) return;
+
+        turmaAutoContador++;
+        turmaRespondeuAtual = false;
+        turmaPerguntaAtualBoss = false;
+        isBossWave = false;
+
+        GerarPerguntaTurmaSincronizada();
+
+        tempoPerguntaInicio = Time.time;
+        tempoInicioQuestao = Time.time;
+
+        AtualizarUI();
+        IniciarTimerTurma(false);
+        SpawnInimigosComNumeros(0.6f + faseAtual * 0.15f);
+    }
+
+    // NOVO: sorteio determinístico. Mesma fase + mesmo índice do professor + mesmo
+    // contador = mesma conta em todos os celulares.
+    void GerarPerguntaTurmaSincronizada()
+    {
+        int seed = faseAtual * 100000 + (turmaPerguntaIndex + 1) * 100 + turmaAutoContador;
+        var rng = new System.Random(seed);
+
+        int a, b, resp;
+        string nova;
+        int tentativas = 0;
+
+        do
+        {
+            switch (faseAtual)
+            {
+                case 1:
+                    a = rng.Next(1, 5); b = rng.Next(1, 9 - a + 1);
+                    resp = a + b;
+                    nova = $"{a} + {b}";
+                    break;
+                case 2:
+                    resp = rng.Next(1, 9); b = rng.Next(1, 9);
+                    a = resp + b;
+                    nova = $"{a} - {b}";
+                    break;
+                case 3:
+                    resp = rng.Next(2, 9); b = rng.Next(2, 9);
+                    a = b * resp;
+                    nova = $"{a} ÷ {b}";
+                    break;
+                default:
+                    a = rng.Next(2, 10); b = rng.Next(2, 10);
+                    resp = a * b;
+                    nova = $"{a} × {b}";
+                    break;
+            }
+            tentativas++;
+        }
+        // não repete a conta nem o resultado da pergunta anterior
+        while ((nova == perguntaAtual || resp == correctAnswer) && tentativas < 20);
+
+        perguntaAtual = nova;
+        correctAnswer = resp;
+
+        questionText.gameObject.SetActive(true);
+        if (bossQuestionText != null) bossQuestionText.gameObject.SetActive(false);
+        questionText.text = perguntaAtual;
     }
 
     void ReiniciarJogo()
@@ -470,7 +611,7 @@ public class GameManager : MonoBehaviour
         GameResultSender.instance.Enviar(
             faseAtual, score, acertos, erros,
             aproveitamento, tempoTotal,
-            operacoesJson, false 
+            operacoesJson, false
         );
     }
 
@@ -496,6 +637,7 @@ public class GameManager : MonoBehaviour
             operacoesJson, concluiuFase
         );
     }
+
     public void AtivarTempoLento(float duracao)
     {
         tempoLentoAtivo = true;
@@ -546,9 +688,9 @@ public class GameManager : MonoBehaviour
         GerarPerguntaBoss();
 
         bool bossFinal = (ondasCompletas == 6);
-        float velocidade = bossFinal  
-                    ? 0.5f + (faseAtual * 0.1f)   
-            : 0.8f + (faseAtual * 0.15f); 
+        float velocidade = bossFinal
+            ? 0.5f + (faseAtual * 0.1f)
+            : 0.8f + (faseAtual * 0.15f);
 
         SpawnInimigosComNumeros(velocidade);
     }
@@ -659,7 +801,7 @@ public class GameManager : MonoBehaviour
                 a = correctAnswer + b + c;
                 perguntaAtual = $"{a} - {b} - {c}";
                 break;
-            case 3: 
+            case 3:
                 b = Random.Range(0, 2) == 0 ? 8 : 9;
                 int quoc = Random.Range(1, 5);
                 a = b * quoc;
@@ -667,7 +809,7 @@ public class GameManager : MonoBehaviour
                 correctAnswer = quoc + c;
                 perguntaAtual = $"({a} ÷ {b}) + {c}";
                 break;
-            case 4: 
+            case 4:
                 a = Random.Range(0, 2) == 0 ? 8 : 9;
                 b = Random.Range(1, 5);
                 c = Random.Range(1, 6);
@@ -698,7 +840,7 @@ public class GameManager : MonoBehaviour
     float[] GerarPosicoesX(int quantidade)
     {
         float[] pos = new float[quantidade];
-        float larg = 22f; 
+        float larg = 22f;
         float espac = larg / quantidade;
         float inicio = -larg / 2f + espac / 2f;
         for (int i = 0; i < quantidade; i++)
@@ -729,7 +871,6 @@ public class GameManager : MonoBehaviour
 
     public void CheckAnswer(int number)
     {
-
         if (!jogoIniciado) return;
 
         if (modoAtual == ModoJogo.Turma)
@@ -737,8 +878,6 @@ public class GameManager : MonoBehaviour
             CheckAnswerTurma(number);
             return;
         }
-
-        if (!jogoIniciado) return;
 
         if (!totalRespostasPorFase.ContainsKey(faseAtual)) totalRespostasPorFase[faseAtual] = 0;
         totalRespostasPorFase[faseAtual]++;
@@ -848,12 +987,13 @@ public class GameManager : MonoBehaviour
             }
         }
     }
+
     void CheckAnswerTurma(int number)
     {
-        if (turmaRespondeuAtual) return;
+        if (turmaRespondeuAtual) return; // também bloqueia depois que o tempo acabou
         turmaRespondeuAtual = true;
 
-    bool acertou = (number == correctAnswer);
+        bool acertou = (number == correctAnswer);
 
         if (acertou)
         {
@@ -883,7 +1023,12 @@ public class GameManager : MonoBehaviour
         foreach (var e in FindAll<Enemy>()) if (e != null) Destroy(e.gameObject);
 
         AtualizarUI();
-        questionText.text = "Aguardando o professor...";
+        // O timer NÃO é desligado aqui; segue contando até zerar
+        questionText.gameObject.SetActive(true);
+        if (bossQuestionText != null) bossQuestionText.gameObject.SetActive(false);
+        questionText.text = turmaModoManual
+            ? "Aguardando o professor..."
+            : "Aguarde a próxima pergunta...";
     }
 
     void IniciarSequenciaGameOver()
@@ -902,7 +1047,6 @@ public class GameManager : MonoBehaviour
 
     public void ExecutarGameOver()
     {
-
         EnviarResultado(false);
         FeedbackManager.instance.Esconder();
         hudPanel.SetActive(false);
@@ -1044,6 +1188,7 @@ public class GameManager : MonoBehaviour
         MostrarSomente(faseCompletaPanel);
         Invoke(nameof(PausarJogo), 0.6f);
     }
+
     void PausarJogo() { Time.timeScale = 0f; }
 
     void AtualizarUI()

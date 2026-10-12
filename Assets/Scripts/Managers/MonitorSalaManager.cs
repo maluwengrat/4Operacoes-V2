@@ -23,16 +23,17 @@ public class MonitorSalaManager : MonoBehaviour
     public TextMeshProUGUI textoFaseAtual;
     public TextMeshProUGUI textoPerguntaAtual;
     public TextMeshProUGUI textoRespostaAtual;
+    public TextMeshProUGUI textoContagem; // NOVO (opcional): mostra o tempo restante até liberar
 
     [Header("Painel Pergunta Manual")]
     public GameObject painelPerguntaManual;
-    public Toggle toggleBossManual;           
+    public Toggle toggleBossManual;
     public TMP_InputField inputNumeroCManual;
     public TextMeshProUGUI textoFaseOperacaoManual;
     public TextMeshProUGUI textoErroManual;
 
-    public TMP_InputField inputEnunciadoManual; 
-    public TMP_InputField inputRespostaManual;  
+    public TMP_InputField inputEnunciadoManual;
+    public TMP_InputField inputRespostaManual;
     public Button btnConfirmarPerguntaManual;
     public Button btnCancelarPerguntaManual;
 
@@ -51,6 +52,12 @@ public class MonitorSalaManager : MonoBehaviour
     private const int rodadasPorFase = 7;
     private readonly HashSet<string> perguntasUsadasProfessor = new HashSet<string>();
 
+    // NOVO: trava de tempo entre perguntas
+    // Margem extra: o aluno só recebe a pergunta até ~1,5s depois (polling) + latência
+    private const float margemSincronia = 4f;
+    private bool aguardandoLiberar = false;
+    private float liberaEm = 0f;
+
     private readonly string[] nomesFaseProfessor = { "", "Adição", "Subtração", "Divisão", "Multiplicação" };
     private readonly string[] simbolosOperacao = { "", "+", "-", "÷", "×" };
 
@@ -62,6 +69,7 @@ public class MonitorSalaManager : MonoBehaviour
     {
         if (painelMonitor != null) painelMonitor.SetActive(false);
         if (painelPerguntaManual != null) painelPerguntaManual.SetActive(false);
+        if (textoContagem != null) textoContagem.text = "";
 
         if (btnIniciarPartida != null) btnIniciarPartida.onClick.AddListener(IniciarPartida);
         if (btnEncerrarSala != null) btnEncerrarSala.onClick.AddListener(EncerrarSala);
@@ -86,6 +94,36 @@ public class MonitorSalaManager : MonoBehaviour
             timerAtualizacao = intervaloAtualizacao;
             AtualizarLista();
         }
+
+        // NOVO: controla a trava entre perguntas
+        if (aguardandoLiberar)
+        {
+            float restante = liberaEm - Time.time;
+
+            if (restante > 0f)
+            {
+                if (textoContagem != null)
+                    textoContagem.text = "Próxima em " + Mathf.CeilToInt(restante) + "s";
+            }
+            else
+            {
+                aguardandoLiberar = false;
+                if (textoContagem != null) textoContagem.text = "";
+
+                bool manual = toggleModoManual != null && toggleModoManual.isOn;
+                if (manual)
+                {
+                    // Professor controla: libera os botões
+                    if (btnProximaPergunta != null) btnProximaPergunta.interactable = true;
+                    if (btnProximaFase != null) btnProximaFase.interactable = true;
+                }
+                else
+                {
+                    // Automático: segue sozinho
+                    AvancarAutomatico();
+                }
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -98,6 +136,7 @@ public class MonitorSalaManager : MonoBehaviour
         monitorAtivo = true;
         timerAtualizacao = 0f;
         partidaIniciada = false;
+        aguardandoLiberar = false; // NOVO
         faseAtualProfessor = 1;
         perguntaIndexAtual = -1;
         contadorPerguntaFase = 0;
@@ -109,6 +148,7 @@ public class MonitorSalaManager : MonoBehaviour
         if (btnProximaFase != null) btnProximaFase.interactable = false;
         if (textoPerguntaAtual != null) textoPerguntaAtual.text = "—";
         if (textoRespostaAtual != null) textoRespostaAtual.text = "";
+        if (textoContagem != null) textoContagem.text = "";
         AtualizarTextoFase();
     }
 
@@ -116,6 +156,7 @@ public class MonitorSalaManager : MonoBehaviour
     {
         painelMonitor.SetActive(false);
         monitorAtivo = false;
+        aguardandoLiberar = false; // NOVO
     }
 
     void AtualizarTextoFase()
@@ -172,16 +213,37 @@ public class MonitorSalaManager : MonoBehaviour
     void ProximaPerguntaClicked()
     {
         if (!partidaIniciada) return;
+        if (aguardandoLiberar) return; // NOVO: só depois que o tempo acabar
         EnviarProximaPerguntaOuAbrirManual();
     }
 
     void ProximaFaseClicked()
     {
         if (!partidaIniciada) return;
+        if (aguardandoLiberar) return; // NOVO: só depois que o tempo acabar
         if (faseAtualProfessor < 4) faseAtualProfessor++;
         perguntasUsadasProfessor.Clear();
-        contadorPerguntaFase = 0; 
+        contadorPerguntaFase = 0;
         AtualizarTextoFase();
+        EnviarProximaPerguntaOuAbrirManual();
+    }
+
+    // NOVO: no modo automático, decide o que vem depois que o tempo acabou
+    void AvancarAutomatico()
+    {
+        if (!partidaIniciada) return;
+
+        if (contadorPerguntaFase >= rodadasPorFase)
+        {
+            if (faseAtualProfessor >= 4)
+            {
+                if (textoContagem != null) textoContagem.text = "Todas as fases concluídas";
+                return;
+            }
+            ProximaFaseClicked(); // fecha a fase e já envia a primeira da próxima
+            return;
+        }
+
         EnviarProximaPerguntaOuAbrirManual();
     }
 
@@ -196,7 +258,7 @@ public class MonitorSalaManager : MonoBehaviour
             if (inputEnunciadoManual != null) inputEnunciadoManual.text = "";
             if (inputRespostaManual != null) inputRespostaManual.text = "";
             if (inputNumeroCManual != null) inputNumeroCManual.text = "";
-            if (toggleBossManual != null) toggleBossManual.isOn = ehBoss; 
+            if (toggleBossManual != null) toggleBossManual.isOn = ehBoss;
             if (painelPerguntaManual != null) painelPerguntaManual.SetActive(true);
             AtualizarCabecalhoManual();
         }
@@ -272,6 +334,7 @@ public class MonitorSalaManager : MonoBehaviour
         if (painelPerguntaManual != null) painelPerguntaManual.SetActive(false);
         EnviarPergunta(enunciado, resposta, ehBoss);
     }
+
     void MostrarErroManual(string mensagem)
     {
         if (textoErroManual != null)
@@ -286,7 +349,14 @@ public class MonitorSalaManager : MonoBehaviour
         string codigo = FirebaseManager.instance.codigoSalaAtual;
 
         perguntaIndexAtual++;
-        contadorPerguntaFase++; 
+        contadorPerguntaFase++;
+
+        // NOVO: trava os botões já no clique (evita clique duplo) e define quando libera
+        float duracao = boss ? GameManager.TurmaTempoBoss : GameManager.TurmaTempoNormal;
+        aguardandoLiberar = true;
+        liberaEm = Time.time + duracao + margemSincronia;
+        if (btnProximaPergunta != null) btnProximaPergunta.interactable = false;
+        if (btnProximaFase != null) btnProximaFase.interactable = false;
 
         FirebaseManager.instance.ResetarRespostasAlunos(codigo, new List<string>(ultimosUserIds));
 
@@ -296,8 +366,18 @@ public class MonitorSalaManager : MonoBehaviour
                 if (!sucesso)
                 {
                     Debug.LogError("Erro ao enviar pergunta.");
+                    // NOVO: se falhou, não deixa o professor travado: libera já
+                    aguardandoLiberar = false;
+                    if (textoContagem != null) textoContagem.text = "";
+                    perguntaIndexAtual--;
+                    contadorPerguntaFase--;
+                    if (btnProximaPergunta != null) btnProximaPergunta.interactable = true;
+                    if (btnProximaFase != null) btnProximaFase.interactable = true;
                     return;
                 }
+
+                // NOVO: a contagem passa a valer a partir da confirmação do envio
+                liberaEm = Time.time + duracao + margemSincronia;
 
                 if (textoPerguntaAtual != null)
                     textoPerguntaAtual.text = (boss ? "[BOSS] " : "") + enunciado;
@@ -307,6 +387,7 @@ public class MonitorSalaManager : MonoBehaviour
                     textoRodadaAtual.text = $"Rodada {contadorPerguntaFase}/{rodadasPorFase}" + (boss ? " (BOSS)" : "");
             });
     }
+
     void GerarPerguntaAutomatica(int fase, out string enunciado, out int resposta)
     {
         int a = 0, b = 0;
@@ -345,6 +426,7 @@ public class MonitorSalaManager : MonoBehaviour
 
         perguntasUsadasProfessor.Add(enunciado);
     }
+
     void GerarPerguntaBossAutomatica(int fase, out string enunciado, out int resposta)
     {
         int a, b, c;
@@ -407,11 +489,10 @@ public class MonitorSalaManager : MonoBehaviour
         yield return req.SendWebRequest();
 
         if (req.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
-            if (req.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning("[MonitorSalaManager] Erro ao buscar alunos: " + req.error);
-                yield break;
-            }
+        {
+            Debug.LogWarning("[MonitorSalaManager] Erro ao buscar alunos: " + req.error);
+            yield break;
+        }
 
         string json = req.downloadHandler.text;
 

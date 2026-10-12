@@ -326,49 +326,47 @@ public class FirebaseManager : MonoBehaviour
         callback(lista);
     }
 
-
-
-List<DadosJogador> ParsearRanking(string json)
-{
-    var lista = new List<DadosJogador>();
-    if (json == "null" || string.IsNullOrEmpty(json)) return lista;
-
-    // Guarda o melhor resultado de cada jogador (por userId)
-    var melhorPorJogador = new Dictionary<string, DadosJogador>();
-
-    // Nível 1: cada userId
-    foreach (var (userId, blocoUsuario) in ExtrairObjetosComChave(json))
+    List<DadosJogador> ParsearRanking(string json)
     {
-        // Nível 2: cada fase dentro do userId
-        foreach (var (faseChave, blocoFase) in ExtrairObjetosComChave(blocoUsuario))
+        var lista = new List<DadosJogador>();
+        if (json == "null" || string.IsNullOrEmpty(json)) return lista;
+
+        // Guarda o melhor resultado de cada jogador (por userId)
+        var melhorPorJogador = new Dictionary<string, DadosJogador>();
+
+        // Nível 1: cada userId
+        foreach (var (userId, blocoUsuario) in ExtrairObjetosComChave(json))
         {
-            if (!blocoFase.Contains("\"nome\"")) continue;
-
-            try
+            // Nível 2: cada fase dentro do userId
+            foreach (var (faseChave, blocoFase) in ExtrairObjetosComChave(blocoUsuario))
             {
-                DadosJogador d = new DadosJogador();
-                d.userId = userId;
-                d.nome = ExtrairValorString(blocoFase, "nome");
-                d.pontos = ExtrairValorInt(blocoFase, "pontos");
-                d.acertos = ExtrairValorInt(blocoFase, "acertos");
-                d.erros = ExtrairValorInt(blocoFase, "erros");
-                d.aproveitamento = ExtrairValorInt(blocoFase, "aproveitamento");
-                d.fase = ExtrairValorInt(blocoFase, "fase");
+                if (!blocoFase.Contains("\"nome\"")) continue;
 
-                if (string.IsNullOrEmpty(d.nome)) continue;
+                try
+                {
+                    DadosJogador d = new DadosJogador();
+                    d.userId = userId;
+                    d.nome = ExtrairValorString(blocoFase, "nome");
+                    d.pontos = ExtrairValorInt(blocoFase, "pontos");
+                    d.acertos = ExtrairValorInt(blocoFase, "acertos");
+                    d.erros = ExtrairValorInt(blocoFase, "erros");
+                    d.aproveitamento = ExtrairValorInt(blocoFase, "aproveitamento");
+                    d.fase = ExtrairValorInt(blocoFase, "fase");
 
-                if (!melhorPorJogador.ContainsKey(userId) || d.pontos > melhorPorJogador[userId].pontos)
-                    melhorPorJogador[userId] = d;
+                    if (string.IsNullOrEmpty(d.nome)) continue;
+
+                    if (!melhorPorJogador.ContainsKey(userId) || d.pontos > melhorPorJogador[userId].pontos)
+                        melhorPorJogador[userId] = d;
+                }
+                catch { }
             }
-            catch { }
         }
+
+        lista.AddRange(melhorPorJogador.Values);
+        return lista;
     }
 
-    lista.AddRange(melhorPorJogador.Values);
-    return lista;
-}
-
-string ExtrairValorString(string json, string chave)
+    string ExtrairValorString(string json, string chave)
     {
         // Busca só pela chave + ":", sem exigir a aspas logo em seguida —
         // o Google às vezes retorna JSON "pretty" com espaço/quebra de linha
@@ -487,9 +485,11 @@ string ExtrairValorString(string json, string chave)
         if (!autenticado) yield return EsperarAutenticacao();
 
         string timestamp = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        // NOVO: a sala já nasce em modo manual (padrão seguro)
         string json = "{"
             + "\"status\":\"aguardando\","
             + "\"faseAtual\":1,"
+            + "\"modoManual\":true,"
             + "\"criadoEm\":\"" + timestamp + "\""
             + "}";
 
@@ -513,6 +513,32 @@ string ExtrairValorString(string json, string chave)
             Debug.LogError("Erro ao criar sala: " + req.error);
             callback(null);
         }
+    }
+
+    // NOVO: o PAINEL DO PROFESSOR chama isso quando a checkbox
+    // "inserir pergunta manualmente" muda (e também ao iniciar a partida).
+    // true = professor controla as perguntas; false = automático.
+    public void DefinirModoManualSala(string codigo, bool manual)
+    {
+        if (string.IsNullOrEmpty(codigo)) return;
+        StartCoroutine(DefinirModoManualCoroutine(codigo, manual));
+    }
+
+    IEnumerator DefinirModoManualCoroutine(string codigo, bool manual)
+    {
+        if (!autenticado) yield return EsperarAutenticacao();
+
+        string url = ComAuth(FIREBASE_URL + "/salas/" + codigo + "/modoManual.json");
+        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(manual ? "true" : "false");
+        UnityWebRequest req = new UnityWebRequest(url, "PUT");
+        req.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        req.downloadHandler = new DownloadHandlerBuffer();
+        req.SetRequestHeader("Content-Type", "application/json");
+
+        yield return req.SendWebRequest();
+
+        if (req.result != UnityWebRequest.Result.Success)
+            Debug.LogError("Erro ao definir modo manual: " + req.error);
     }
 
     public void EntrarNaSala(string codigo, System.Action<bool, string> callback)
@@ -1045,6 +1071,22 @@ string ExtrairValorString(string json, string chave)
                         onSalaFinalizada?.Invoke();
                         yield break;
                     }
+                }
+
+                // NOVO: lê a checkbox do professor e repassa para o GameManager
+                string urlModo = ComAuth(FIREBASE_URL + "/salas/" + codigoSalaAtual + "/modoManual.json");
+                UnityWebRequest reqModo = UnityWebRequest.Get(urlModo);
+                yield return reqModo.SendWebRequest();
+
+                if (reqModo.result == UnityWebRequest.Result.Success)
+                {
+                    string modo = reqModo.downloadHandler.text.Trim();
+                    if (modo == "true" || modo == "false")
+                    {
+                        if (GameManager.instance != null)
+                            GameManager.instance.DefinirModoManualTurma(modo == "true");
+                    }
+                    // "null" = professor nunca definiu: o GameManager fica no padrão (manual)
                 }
 
                 string url = ComAuth(FIREBASE_URL + "/salas/" + codigoSalaAtual + "/perguntaAtual.json");
