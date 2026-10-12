@@ -1,86 +1,83 @@
+using System.Runtime.InteropServices;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-using System.Runtime.InteropServices;
-#endif
-
-// ─────────────────────────────────────────────────────────────────────
-// CampoTextoWebAtivador
-//
-// Encaixe este script no MESMO GameObject de cada TMP_InputField que
-// precisa funcionar em mobile WebGL: InputCódigoSala, InputNomeAluno,
-// InputSenha (do painel do professor).
-//
-// SETUP:
-//   1. Selecione o GameObject do campo (ex.: InputCódigoSala).
-//   2. Add Component > CampoTextoWebAtivador.
-//   3. O campo "Campo" preenche sozinho (pega o TMP_InputField do
-//      próprio objeto). Confirme que preencheu certo.
-//   4. Marque "Senha" como true SÓ no InputSenha do professor
-//      (os outros ficam false).
-//
-// Fora de WebGL (Editor, build standalone) este script não faz nada —
-// o TMP_InputField funciona normalmente do jeito nativo do Unity.
-// ─────────────────────────────────────────────────────────────────────
-[RequireComponent(typeof(TMP_InputField))]
-public class CampoTextoWebAtivador : MonoBehaviour, ISelectHandler
+// Faz os TMP_InputField funcionarem no celular (WebGL).
+// Não precisa colocar na cena: ele se cria sozinho.
+public class CampoTextoWebAtivador : MonoBehaviour
 {
-    [Tooltip("Preenchido automaticamente a partir deste GameObject.")]
-    public TMP_InputField campo;
-
-    [Tooltip("Marque true apenas para campos de senha (ex.: InputSenha do professor).")]
-    public bool senha = false;
-
 #if UNITY_WEBGL && !UNITY_EDITOR
-    [DllImport("__Internal")] private static extern void CTW_Mostrar(
-        float x, float y, float largura, float altura,
-        string placeholder, int senhaFlag, string textoInicial, int maxLength);
-#endif
+    [DllImport("__Internal")] private static extern int CampoTextoWeb_EhMobile();
+    [DllImport("__Internal")] private static extern void CampoTextoWeb_Iniciar(string goName);
+    [DllImport("__Internal")] private static extern void CampoTextoWeb_Abrir(string valor, string placeholder, int maxLen, int senha);
+    [DllImport("__Internal")] private static extern void CampoTextoWeb_Fechar();
 
-    void Reset()
+    private TMP_InputField campoAtual;
+    private bool ativo;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Criar()
     {
-        campo = GetComponent<TMP_InputField>();
+        var go = new GameObject("CampoTextoWebAtivador");
+        DontDestroyOnLoad(go);
+        go.AddComponent<CampoTextoWebAtivador>();
     }
 
-    void Awake()
+    void Start()
     {
-        if (campo == null) campo = GetComponent<TMP_InputField>();
+        ativo = CampoTextoWeb_EhMobile() == 1;
+        if (!ativo) return;
+
+        // Deixa o navegador receber as teclas do <input> HTML
+        WebGLInput.captureAllKeyboardInput = false;
+        CampoTextoWeb_Iniciar(gameObject.name);
     }
 
-    public void OnSelect(BaseEventData eventData)
+    void Update()
     {
-#if UNITY_WEBGL && !UNITY_EDITOR
-        // Só ativa o input HTML em mobile — no desktop (teclado físico)
-        // o TMP_InputField já funciona normalmente sem esse truque.
-        if (MobileUI.instance == null || !MobileUI.instance.IsMobile) return;
+        if (!ativo || EventSystem.current == null) return;
 
-        if (CampoTextoWebBridgeAtivo.instance != null)
-            CampoTextoWebBridgeAtivo.instance.RegistrarCampoAtivo(campo);
-
-        RectTransform rt = campo.GetComponent<RectTransform>();
-        Vector3[] cantos = new Vector3[4];
-        rt.GetWorldCorners(cantos); // 0=inferior-esq, 1=superior-esq, 2=superior-dir, 3=inferior-dir
-
-        float xMin = Mathf.Min(cantos[0].x, cantos[1].x);
-        float xMax = Mathf.Max(cantos[2].x, cantos[3].x);
-        float topoMundo = Mathf.Max(cantos[1].y, cantos[2].y);
-        float baseMundo = Mathf.Min(cantos[0].y, cantos[3].y);
-
-        float largura = xMax - xMin;
-        float altura = topoMundo - baseMundo;
-        float yTopoTela = Screen.height - topoMundo; // flip: Unity Y-pra-cima → tela Y-pra-baixo
-
-        string placeholder = "";
-        if (campo.placeholder != null)
+        // O campo foi desativado/destruído (painel fechou)
+        if (campoAtual != null && !campoAtual.gameObject.activeInHierarchy)
         {
-            TMP_Text placeholderTmp = campo.placeholder as TMP_Text;
-            if (placeholderTmp != null) placeholder = placeholderTmp.text;
+            campoAtual = null;
+            CampoTextoWeb_Fechar();
         }
 
-        CTW_Mostrar(xMin, yTopoTela, largura, altura,
-                    placeholder, senha ? 1 : 0, campo.text, campo.characterLimit);
-#endif
+        GameObject sel = EventSystem.current.currentSelectedGameObject;
+        TMP_InputField campo = sel != null ? sel.GetComponent<TMP_InputField>() : null;
+
+        if (campo == campoAtual) return;
+
+        if (campo == null)
+        {
+            campoAtual = null;
+            CampoTextoWeb_Fechar();
+            return;
+        }
+
+        campoAtual = campo;
+        int senha = campo.contentType == TMP_InputField.ContentType.Password ? 1 : 0;
+        string placeholder = campo.placeholder is TMP_Text p ? p.text : "";
+        CampoTextoWeb_Abrir(campo.text, placeholder, campo.characterLimit, senha);
     }
+
+    // Chamado pelo JavaScript a cada letra digitada
+    public void OnTextoWeb(string valor)
+    {
+        if (campoAtual == null) return;
+        if (campoAtual.characterLimit > 0 && valor.Length > campoAtual.characterLimit)
+            valor = valor.Substring(0, campoAtual.characterLimit);
+        campoAtual.text = valor;
+    }
+
+    // Chamado pelo JavaScript quando o aluno aperta Enter/OK ou sai do campo
+    public void OnFecharWeb(string _)
+    {
+        campoAtual = null;
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
+    }
+#endif
 }

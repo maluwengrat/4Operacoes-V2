@@ -126,6 +126,6 @@ public class SalaEsperaManager : MonoBehaviour
         if (GameManager.instance != null)
             GameManager.instance.IniciarJogo();
 
-        Debug.Log("Partida iniciada pelo professor! Aluno começando...");
+        Debug.Log("Partida iniciada pelo professor!\n Aluno começando...");
     }
 }

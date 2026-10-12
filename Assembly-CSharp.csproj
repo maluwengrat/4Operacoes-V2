@@ -64,7 +64,6 @@
     <Compile Include="Assets\Scripts\Managers\SalaEsperaManager.cs" />
     <Compile Include="Assets\Scripts\Managers\PoderManager.cs" />
     <Compile Include="Assets\Scripts\Others\PlayerController.cs" />
-    <Compile Include="Assets\Scripts\Others\CampoTextoWebBridgeAtivo.cs" />
     <Compile Include="Assets\Scripts\Others\SeguirNave.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_ExampleScript_01.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMPro_InstructionOverlay.cs" />

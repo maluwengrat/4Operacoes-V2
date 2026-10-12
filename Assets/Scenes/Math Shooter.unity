@@ -4858,8 +4858,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8ca1f6a069948d548bc5b1b75275f4e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CampoTextoWebAtivador
-  campo: {fileID: 323506245}
-  senha: 1
 --- !u!1 &328584663
 GameObject:
   m_ObjectHideFlags: 0
@@ -6702,8 +6700,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8ca1f6a069948d548bc5b1b75275f4e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CampoTextoWebAtivador
-  campo: {fileID: 427100610}
-  senha: 0
 --- !u!1 &432232434
 GameObject:
   m_ObjectHideFlags: 0
@@ -9177,50 +9173,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!1 &597472043
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 597472045}
-  - component: {fileID: 597472044}
-  m_Layer: 0
-  m_Name: CampoTextoWebBridgeAtivo
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &597472044
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 597472043}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bd62e27be4f59ba4c910ec49f90ba5ad, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CampoTextoWebBridgeAtivo
---- !u!4 &597472045
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 597472043}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1533.3651, y: 401.06784, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &600845020
 GameObject:
   m_ObjectHideFlags: 0
@@ -19029,8 +18981,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8ca1f6a069948d548bc5b1b75275f4e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CampoTextoWebAtivador
-  campo: {fileID: 1335937526}
-  senha: 0
 --- !u!1 &1345869938
 GameObject:
   m_ObjectHideFlags: 0
@@ -22119,6 +22069,7 @@ MonoBehaviour:
   textoFaseAtual: {fileID: 1310232399}
   textoPerguntaAtual: {fileID: 1882347302}
   textoRespostaAtual: {fileID: 859168351}
+  textoContagem: {fileID: 0}
   painelPerguntaManual: {fileID: 924275303}
   toggleBossManual: {fileID: 207865084}
   inputNumeroCManual: {fileID: 1830047556}
@@ -30739,5 +30690,4 @@ SceneRoots:
   - {fileID: 955162917}
   - {fileID: 946183633}
   - {fileID: 299398285}
-  - {fileID: 597472045}
   - {fileID: 116950080}

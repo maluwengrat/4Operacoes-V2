@@ -1,116 +1,86 @@
-// ─────────────────────────────────────────────────────────────────────
-// CampoTextoWebBridge.jslib
-//
-// Cria um <input> HTML invisível sobreposto ao canvas do Unity. Em
-// WebGL mobile, o TMP_InputField (desenhado dentro do <canvas>) não
-// consegue abrir o teclado virtual do navegador — só um elemento HTML
-// <input> de verdade, focado DENTRO do mesmo gesto de toque, consegue.
-//
-// Fluxo:
-//   C# (CampoTextoWebAtivador.OnSelect) chama CTW_Mostrar(...)
-//   → cria/reposiciona o <input> oculto e dá focus() nele
-//   → navegador abre o teclado
-//   → cada tecla digitada dispara 'input' → SendMessage de volta pro Unity
-//   → 'blur' (usuário tocou fora ou apertou Enter/OK) esconde o input
-//     e avisa o Unity
-//
-// SETUP: coloque este arquivo em Assets/Plugins/WebGL/
-// ─────────────────────────────────────────────────────────────────────
-
 mergeInto(LibraryManager.library, {
 
-    CTW_Mostrar: function (x, y, largura, altura, placeholderPtr, senhaFlag, textoInicialPtr, maxLength) {
-        var placeholder = UTF8ToString(placeholderPtr);
-        var textoInicial = UTF8ToString(textoInicialPtr);
+  CampoTextoWeb_EhMobile: function () {
+    var ua = navigator.userAgent || '';
+    var mobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)
+      || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+    return mobile ? 1 : 0;
+  },
 
-        var canvas = document.querySelector('#unity-canvas');
-        if (!canvas) return;
+  CampoTextoWeb_Iniciar: function (goNamePtr) {
+    if (window.__ctw) return;
+    var S = window.__ctw = { goName: UTF8ToString(goNamePtr), el: null, cfg: null };
 
-        var input = document.getElementById('campo-texto-web-oculto');
-        if (!input) {
-            input = document.createElement('input');
-            input.id = 'campo-texto-web-oculto';
-            input.autocomplete = 'off';
-            input.autocapitalize = 'off';
-            input.setAttribute('autocorrect', 'off');
-            input.spellcheck = false;
+    S.enviar = function (metodo, valor) {
+      try { window.unityInstance.SendMessage(S.goName, metodo, valor); } catch (e) {}
+    };
 
-            input.style.position = 'fixed';
-            input.style.zIndex = '10000';
-            input.style.border = 'none';
-            input.style.outline = 'none';
-            input.style.background = 'transparent';
-            input.style.color = 'transparent';
-            input.style.caretColor = '#ffffff';
-            input.style.padding = '0';
-            input.style.margin = '0';
-            input.style.display = 'none';
-            document.body.appendChild(input);
+    S.fechar = function (avisar) {
+      var el = S.el;
+      S.cfg = null;
+      if (!el) return;
+      S.el = null;
+      if (el.parentNode) el.parentNode.removeChild(el);
+      if (avisar) S.enviar('OnFecharWeb', '');
+    };
 
-            input.addEventListener('input', function () {
-                if (window.unityInstance) {
-                    window.unityInstance.SendMessage(
-                        'CampoTextoWebBridgeAtivo', 'OnTextoAlteradoWeb', input.value
-                    );
-                }
-            });
+    S.abrir = function () {
+      var cfg = S.cfg;
+      if (!cfg) return;
+      var el = S.el;
 
-            input.addEventListener('blur', function () {
-                input.style.display = 'none';
-                if (window.unityInstance) {
-                    window.unityInstance.SendMessage(
-                        'CampoTextoWebBridgeAtivo', 'OnPerdeuFocoWeb', ''
-                    );
-                }
-            });
+      if (!el) {
+        el = document.createElement('input');
+        S.el = el;
+        el.setAttribute('autocomplete', 'off');
+        el.setAttribute('autocorrect', 'off');
+        el.setAttribute('autocapitalize', 'off');
+        el.setAttribute('spellcheck', 'false');
+        el.style.cssText =
+          'position:fixed;top:12px;left:50%;transform:translateX(-50%);' +
+          'width:min(92vw,520px);padding:12px 14px;font-size:18px;' +
+          'background:#111;color:#fff;border:2px solid #ff6a00;border-radius:10px;' +
+          'outline:none;z-index:100000;box-sizing:border-box;';
 
-            // Enter/"Ir" no teclado mobile confirma e fecha
-            input.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') input.blur();
-            });
-        }
+        el.addEventListener('input', function () { S.enviar('OnTextoWeb', el.value); });
+        el.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') { e.preventDefault(); S.fechar(true); }
+        });
+        el.addEventListener('blur', function () {
+          setTimeout(function () { if (S.el === el) S.fechar(true); }, 150);
+        });
 
-        var rect = canvas.getBoundingClientRect();
-        var escalaX = rect.width / canvas.width;
-        var escalaY = rect.height / canvas.height;
+        // Em tela cheia só aparece o que estiver dentro do elemento em tela cheia
+        var host = document.fullscreenElement || document.webkitFullscreenElement || document.body;
+        host.appendChild(el);
+      }
 
-        input.style.left = (rect.left + x * escalaX) + 'px';
-        input.style.top = (rect.top + y * escalaY) + 'px';
-        input.style.width = (largura * escalaX) + 'px';
-        input.style.height = (altura * escalaY) + 'px';
-        input.style.fontSize = Math.max(16, altura * escalaY * 0.6) + 'px'; // 16px+ evita zoom automático no iOS
+      el.type = cfg.senha ? 'password' : 'text';
+      el.placeholder = cfg.placeholder || '';
+      if (cfg.maxLen > 0) el.maxLength = cfg.maxLen; else el.removeAttribute('maxlength');
+      if (el.value !== cfg.valor) el.value = cfg.valor;
+      el.focus();
+    };
 
-        input.placeholder = placeholder;
-        input.type = senhaFlag === 1 ? 'password' : 'text';
-        if (maxLength > 0) input.maxLength = maxLength;
-        else input.removeAttribute('maxlength');
-        input.value = textoInicial;
+    // iOS só mostra o teclado se o foco acontecer dentro do toque do usuário
+    var gesto = function () { if (S.cfg) S.abrir(); };
+    document.addEventListener('touchend', gesto, true);
+    document.addEventListener('click', gesto, true);
+  },
 
-        input.style.display = 'block';
-        input.focus();
-    },
+  CampoTextoWeb_Abrir: function (valorPtr, placeholderPtr, maxLen, senha) {
+    var S = window.__ctw;
+    if (!S) return;
+    S.cfg = {
+      valor: UTF8ToString(valorPtr),
+      placeholder: UTF8ToString(placeholderPtr),
+      maxLen: maxLen,
+      senha: senha === 1
+    };
+    S.abrir();
+  },
 
-    CTW_AtualizarPosicao: function (x, y, largura, altura) {
-        var canvas = document.querySelector('#unity-canvas');
-        var input = document.getElementById('campo-texto-web-oculto');
-        if (!canvas || !input) return;
-
-        var rect = canvas.getBoundingClientRect();
-        var escalaX = rect.width / canvas.width;
-        var escalaY = rect.height / canvas.height;
-
-        input.style.left = (rect.left + x * escalaX) + 'px';
-        input.style.top = (rect.top + y * escalaY) + 'px';
-        input.style.width = (largura * escalaX) + 'px';
-        input.style.height = (altura * escalaY) + 'px';
-    },
-
-    CTW_Esconder: function () {
-        var input = document.getElementById('campo-texto-web-oculto');
-        if (input) {
-            input.blur();
-            input.style.display = 'none';
-        }
-    }
-
+  CampoTextoWeb_Fechar: function () {
+    if (window.__ctw) window.__ctw.fechar(false);
+  }
 });
