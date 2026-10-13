@@ -23,7 +23,7 @@ public class MonitorSalaManager : MonoBehaviour
     public TextMeshProUGUI textoFaseAtual;
     public TextMeshProUGUI textoPerguntaAtual;
     public TextMeshProUGUI textoRespostaAtual;
-    public TextMeshProUGUI textoContagem; // NOVO (opcional): mostra o tempo restante até liberar
+    public TextMeshProUGUI textoContagem;
 
     [Header("Painel Pergunta Manual")]
     public GameObject painelPerguntaManual;
@@ -45,6 +45,8 @@ public class MonitorSalaManager : MonoBehaviour
     private float timerAtualizacao = 0f;
     private bool monitorAtivo = false;
     private bool partidaIniciada = false;
+    private bool partidaFinalizada = false;
+    private bool esperandoProfessor = false; // liberou, mas o professor ainda não mandou a pergunta (manual)
 
     private int faseAtualProfessor = 1;
     private int perguntaIndexAtual = -1;
@@ -52,16 +54,24 @@ public class MonitorSalaManager : MonoBehaviour
     private const int rodadasPorFase = 7;
     private readonly HashSet<string> perguntasUsadasProfessor = new HashSet<string>();
 
-    // NOVO: trava de tempo entre perguntas
-    // Margem extra: o aluno só recebe a pergunta até ~1,5s depois (polling) + latência
-    private const float margemSincronia = 4f;
+    // Os alunos calculam o tempo pelo relógio do servidor (a partir do envio),
+    // então só sobra uma folga curta para a última resposta chegar ao banco.
+    private const float margemSincronia = 2f;
     private bool aguardandoLiberar = false;
-    private float liberaEm = 0f;
+    private float liberaEm = 0f; // Time.realtimeSinceStartup
+
+    // Sinal de vida dos alunos: guarda o último "visto" e quando ele mudou.
+    // O WebGL pausa a aba em segundo plano, por isso a tolerância é generosa.
+    private readonly Dictionary<string, (string visto, float mudouEm)> vistoPorAluno
+        = new Dictionary<string, (string, float)>();
+    private const float tempoSemSinalParaSumir = 40f;
+
+    // Evita buscas simultâneas e reconstrução desnecessária da lista
+    private bool buscandoAlunos = false;
+    private string ultimaAssinaturaLista = null;
 
     private readonly string[] nomesFaseProfessor = { "", "Adição", "Subtração", "Divisão", "Multiplicação" };
     private readonly string[] simbolosOperacao = { "", "+", "-", "÷", "×" };
-
-    private List<string> ultimosUserIds = new List<string>();
 
     void Awake() { instance = this; }
 
@@ -70,6 +80,9 @@ public class MonitorSalaManager : MonoBehaviour
         if (painelMonitor != null) painelMonitor.SetActive(false);
         if (painelPerguntaManual != null) painelPerguntaManual.SetActive(false);
         if (textoContagem != null) textoContagem.text = "";
+
+        if (toggleModoManual != null)
+            toggleModoManual.onValueChanged.AddListener(OnToggleModoManualMudou);
 
         if (btnIniciarPartida != null) btnIniciarPartida.onClick.AddListener(IniciarPartida);
         if (btnEncerrarSala != null) btnEncerrarSala.onClick.AddListener(EncerrarSala);
@@ -88,18 +101,17 @@ public class MonitorSalaManager : MonoBehaviour
     {
         if (!monitorAtivo) return;
 
-        timerAtualizacao -= Time.deltaTime;
+        timerAtualizacao -= Time.unscaledDeltaTime;
         if (timerAtualizacao <= 0f)
         {
-            timerAtualizacao = intervaloAtualizacao;
+            // enquanto espera resposta, consulta mais rápido
+            timerAtualizacao = aguardandoLiberar ? 1.5f : intervaloAtualizacao;
             AtualizarLista();
         }
 
-        // NOVO: controla a trava entre perguntas
         if (aguardandoLiberar)
         {
-            float restante = liberaEm - Time.time;
-
+            float restante = liberaEm - Time.realtimeSinceStartup;
             if (restante > 0f)
             {
                 if (textoContagem != null)
@@ -107,23 +119,74 @@ public class MonitorSalaManager : MonoBehaviour
             }
             else
             {
-                aguardandoLiberar = false;
-                if (textoContagem != null) textoContagem.text = "";
-
-                bool manual = toggleModoManual != null && toggleModoManual.isOn;
-                if (manual)
-                {
-                    // Professor controla: libera os botões
-                    if (btnProximaPergunta != null) btnProximaPergunta.interactable = true;
-                    if (btnProximaFase != null) btnProximaFase.interactable = true;
-                }
-                else
-                {
-                    // Automático: segue sozinho
-                    AvancarAutomatico();
-                }
+                LiberarProximaPergunta();
             }
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Toggle / liberar
+    // ─────────────────────────────────────────────────────────────────
+
+    void OnToggleModoManualMudou(bool manual)
+    {
+        var fb = FirebaseManager.instance;
+        if (fb != null && !string.IsNullOrEmpty(fb.codigoSalaAtual))
+            fb.DefinirModoManualSala(fb.codigoSalaAtual, manual);
+
+        if (!partidaIniciada || partidaFinalizada) return;
+
+        // Estava esperando o professor e ele desmarcou: o jogo assume agora
+        if (!manual && esperandoProfessor)
+        {
+            esperandoProfessor = false;
+            if (painelPerguntaManual != null) painelPerguntaManual.SetActive(false);
+            AvancarAutomatico();
+        }
+    }
+
+    bool FimDeJogo() => faseAtualProfessor >= 4 && contadorPerguntaFase >= rodadasPorFase;
+
+    // Chamado quando o tempo acaba OU quando todos responderam
+    void LiberarProximaPergunta()
+    {
+        aguardandoLiberar = false;
+        if (textoContagem != null) textoContagem.text = "";
+
+        if (FimDeJogo())
+        {
+            FinalizarPartida();
+            return;
+        }
+
+        bool manual = toggleModoManual != null && toggleModoManual.isOn;
+        if (manual)
+        {
+            esperandoProfessor = true;
+            if (btnProximaPergunta != null) btnProximaPergunta.interactable = true;
+            if (btnProximaFase != null) btnProximaFase.interactable = true;
+        }
+        else
+        {
+            AvancarAutomatico();
+        }
+    }
+
+    // Última pergunta da última fase terminou: avisa os alunos
+    void FinalizarPartida()
+    {
+        partidaFinalizada = true;
+        aguardandoLiberar = false;
+        esperandoProfessor = false;
+
+        if (btnProximaPergunta != null) btnProximaPergunta.interactable = false;
+        if (btnProximaFase != null) btnProximaFase.interactable = false;
+        if (painelPerguntaManual != null) painelPerguntaManual.SetActive(false);
+        if (textoContagem != null) textoContagem.text = "Todas as fases concluídas";
+
+        var fb = FirebaseManager.instance;
+        if (fb != null && !string.IsNullOrEmpty(fb.codigoSalaAtual))
+            fb.FinalizarSalaNoServidor(fb.codigoSalaAtual);
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -136,12 +199,18 @@ public class MonitorSalaManager : MonoBehaviour
         monitorAtivo = true;
         timerAtualizacao = 0f;
         partidaIniciada = false;
-        aguardandoLiberar = false; // NOVO
+        partidaFinalizada = false;
+        aguardandoLiberar = false;
+        esperandoProfessor = false;
+        buscandoAlunos = false;
+        ultimaAssinaturaLista = null;
         faseAtualProfessor = 1;
         perguntaIndexAtual = -1;
         contadorPerguntaFase = 0;
         perguntasUsadasProfessor.Clear();
+        vistoPorAluno.Clear();
 
+        if (painelPerguntaManual != null) painelPerguntaManual.SetActive(false);
         if (tituloMonitor != null) tituloMonitor.text = "SALA: " + codigoSala;
         if (btnIniciarPartida != null) btnIniciarPartida.gameObject.SetActive(true);
         if (btnProximaPergunta != null) btnProximaPergunta.interactable = false;
@@ -154,9 +223,17 @@ public class MonitorSalaManager : MonoBehaviour
 
     public void FecharMonitor()
     {
+        CancelInvoke();
         painelMonitor.SetActive(false);
         monitorAtivo = false;
-        aguardandoLiberar = false; // NOVO
+        partidaIniciada = false;
+        partidaFinalizada = false;
+        aguardandoLiberar = false;
+        esperandoProfessor = false;
+        buscandoAlunos = false;
+        ultimaAssinaturaLista = null;
+        vistoPorAluno.Clear();
+        if (painelPerguntaManual != null) painelPerguntaManual.SetActive(false);
     }
 
     void AtualizarTextoFase()
@@ -201,6 +278,9 @@ public class MonitorSalaManager : MonoBehaviour
             if (textoAlunosConectados != null)
                 textoAlunosConectados.text += "\n\nPartida em andamento!";
 
+            bool manualInicial = toggleModoManual == null || toggleModoManual.isOn;
+            FirebaseManager.instance.DefinirModoManualSala(codigo, manualInicial);
+
             // Já dispara a primeira pergunta pra não deixar a turma parada
             EnviarProximaPerguntaOuAbrirManual();
         });
@@ -212,32 +292,39 @@ public class MonitorSalaManager : MonoBehaviour
 
     void ProximaPerguntaClicked()
     {
-        if (!partidaIniciada) return;
-        if (aguardandoLiberar) return; // NOVO: só depois que o tempo acabar
+        if (!partidaIniciada || partidaFinalizada) return;
+        if (aguardandoLiberar) return;
         EnviarProximaPerguntaOuAbrirManual();
     }
 
     void ProximaFaseClicked()
     {
-        if (!partidaIniciada) return;
-        if (aguardandoLiberar) return; // NOVO: só depois que o tempo acabar
-        if (faseAtualProfessor < 4) faseAtualProfessor++;
+        if (!partidaIniciada || partidaFinalizada) return;
+        if (aguardandoLiberar) return;
+
+        if (faseAtualProfessor >= 4)
+        {
+            if (textoContagem != null) textoContagem.text = "Última fase em andamento";
+            return;
+        }
+
+        faseAtualProfessor++;
         perguntasUsadasProfessor.Clear();
         contadorPerguntaFase = 0;
         AtualizarTextoFase();
         EnviarProximaPerguntaOuAbrirManual();
     }
 
-    // NOVO: no modo automático, decide o que vem depois que o tempo acabou
+    // No modo automático, decide o que vem depois que a rodada terminou
     void AvancarAutomatico()
     {
-        if (!partidaIniciada) return;
+        if (!partidaIniciada || partidaFinalizada) return;
 
         if (contadorPerguntaFase >= rodadasPorFase)
         {
             if (faseAtualProfessor >= 4)
             {
-                if (textoContagem != null) textoContagem.text = "Todas as fases concluídas";
+                FinalizarPartida();
                 return;
             }
             ProximaFaseClicked(); // fecha a fase e já envia a primeira da próxima
@@ -250,7 +337,6 @@ public class MonitorSalaManager : MonoBehaviour
     void EnviarProximaPerguntaOuAbrirManual()
     {
         bool manual = toggleModoManual != null && toggleModoManual.isOn;
-
         bool ehBoss = contadorPerguntaFase == 5 || contadorPerguntaFase == 6;
 
         if (manual)
@@ -260,6 +346,7 @@ public class MonitorSalaManager : MonoBehaviour
             if (inputNumeroCManual != null) inputNumeroCManual.text = "";
             if (toggleBossManual != null) toggleBossManual.isOn = ehBoss;
             if (painelPerguntaManual != null) painelPerguntaManual.SetActive(true);
+            esperandoProfessor = true;
             AtualizarCabecalhoManual();
         }
         else
@@ -272,6 +359,15 @@ public class MonitorSalaManager : MonoBehaviour
 
             EnviarPergunta(enunciado, resposta, ehBoss);
         }
+    }
+
+    // Se o envio automático falhar, tenta de novo em vez de deixar a turma parada
+    void RepetirEnvioAutomatico()
+    {
+        if (!monitorAtivo || !partidaIniciada || partidaFinalizada || aguardandoLiberar) return;
+        bool manual = toggleModoManual != null && toggleModoManual.isOn;
+        if (manual) return;
+        AvancarAutomatico();
     }
 
     void ConfirmarPerguntaManual()
@@ -350,34 +446,44 @@ public class MonitorSalaManager : MonoBehaviour
 
         perguntaIndexAtual++;
         contadorPerguntaFase++;
+        esperandoProfessor = false;
 
-        // NOVO: trava os botões já no clique (evita clique duplo) e define quando libera
         float duracao = boss ? GameManager.TurmaTempoBoss : GameManager.TurmaTempoNormal;
+
+        // Trava os botões já no clique (evita clique duplo). O prazo provisório é
+        // generoso; o valor certo entra quando o envio for confirmado.
         aguardandoLiberar = true;
-        liberaEm = Time.time + duracao + margemSincronia;
+        liberaEm = Time.realtimeSinceStartup + duracao + margemSincronia + 5f;
         if (btnProximaPergunta != null) btnProximaPergunta.interactable = false;
         if (btnProximaFase != null) btnProximaFase.interactable = false;
 
-        FirebaseManager.instance.ResetarRespostasAlunos(codigo, new List<string>(ultimosUserIds));
-
         FirebaseManager.instance.EnviarProximaPergunta(
-            codigo, enunciado, resposta, faseAtualProfessor, perguntaIndexAtual, boss, (sucesso) =>
+            codigo, enunciado, resposta, faseAtualProfessor, perguntaIndexAtual, boss, duracao, (sucesso) =>
             {
                 if (!sucesso)
                 {
                     Debug.LogError("Erro ao enviar pergunta.");
-                    // NOVO: se falhou, não deixa o professor travado: libera já
                     aguardandoLiberar = false;
-                    if (textoContagem != null) textoContagem.text = "";
                     perguntaIndexAtual--;
                     contadorPerguntaFase--;
                     if (btnProximaPergunta != null) btnProximaPergunta.interactable = true;
                     if (btnProximaFase != null) btnProximaFase.interactable = true;
+
+                    bool manual = toggleModoManual != null && toggleModoManual.isOn;
+                    if (!manual)
+                    {
+                        if (textoContagem != null) textoContagem.text = "Falha ao enviar. Tentando de novo...";
+                        Invoke(nameof(RepetirEnvioAutomatico), 2f);
+                    }
+                    else if (textoContagem != null)
+                    {
+                        textoContagem.text = "Falha ao enviar a pergunta. Tente de novo.";
+                    }
                     return;
                 }
 
-                // NOVO: a contagem passa a valer a partir da confirmação do envio
-                liberaEm = Time.time + duracao + margemSincronia;
+                // A contagem passa a valer a partir da confirmação do envio
+                liberaEm = Time.realtimeSinceStartup + duracao + margemSincronia;
 
                 if (textoPerguntaAtual != null)
                     textoPerguntaAtual.text = (boss ? "[BOSS] " : "") + enunciado;
@@ -478,37 +584,57 @@ public class MonitorSalaManager : MonoBehaviour
 
     IEnumerator BuscarAlunos(string codigo)
     {
+        if (buscandoAlunos) yield break;
+        buscandoAlunos = true;
+        yield return ProcessarBuscaAlunos(codigo);
+        buscandoAlunos = false;
+    }
+
+    IEnumerator ProcessarBuscaAlunos(string codigo)
+    {
         if (FirebaseManager.instance == null) yield break;
         if (!FirebaseManager.instance.EstaAutenticado)
             yield return new WaitUntil(() => FirebaseManager.instance.EstaAutenticado);
 
-        string url = FirebaseManager.instance.ConstruirUrlComAuth(
-             "https://mathshooter-6c0f7-default-rtdb.firebaseio.com/salas/" + codigo + "/jogadores.json");
+        string json = null;
+        yield return FirebaseManager.instance.LerJogadoresJson(codigo, r => json = r);
 
-        var req = UnityEngine.Networking.UnityWebRequest.Get(url);
-        yield return req.SendWebRequest();
-
-        if (req.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
+        if (json == null)
         {
-            Debug.LogWarning("[MonitorSalaManager] Erro ao buscar alunos: " + req.error);
+            Debug.LogWarning("[MonitorSalaManager] Erro ao buscar alunos.");
             yield break;
         }
 
-        string json = req.downloadHandler.text;
-
-        foreach (Transform filho in contentContainer)
-            Destroy(filho.gameObject);
+        // Se o monitor foi fechado/reaberto durante a busca, descarta o resultado
+        if (!monitorAtivo || FirebaseManager.instance.codigoSalaAtual != codigo) yield break;
 
         if (json == "null" || string.IsNullOrEmpty(json))
         {
             if (textoAlunosConectados != null)
                 textoAlunosConectados.text = "Nenhum aluno conectado ainda...";
-            ultimosUserIds.Clear();
+            LimparLista();
+            ultimaAssinaturaLista = "";
             yield break;
         }
 
         List<DadosAlunoSala> alunos = ParsearAlunos(json);
-        ultimosUserIds = alunos.ConvertAll(d => d.userId);
+
+        // Remove da lista quem parou de mandar sinal de vida (fechou a aba, perdeu conexão)
+        alunos.RemoveAll(a =>
+        {
+            if (string.IsNullOrEmpty(a.visto)) return false; // sem sinal (cliente antigo): mantém
+
+            if (!vistoPorAluno.TryGetValue(a.userId, out var anterior) || anterior.visto != a.visto)
+            {
+                vistoPorAluno[a.userId] = (a.visto, Time.realtimeSinceStartup);
+                return false;
+            }
+            return Time.realtimeSinceStartup - anterior.mudouEm > tempoSemSinalParaSumir;
+        });
+
+        // Respondeu = gravou o número da pergunta atual (não precisa de reset entre perguntas)
+        foreach (var a in alunos)
+            a.respondeu = perguntaIndexAtual >= 0 && a.respondeuIndex == perguntaIndexAtual;
 
         if (textoAlunosConectados != null)
             textoAlunosConectados.text = alunos.Count + " aluno(s) conectado(s)";
@@ -516,17 +642,45 @@ public class MonitorSalaManager : MonoBehaviour
         // Ranking: maior pontuação primeiro
         alunos.Sort((a, b) => b.pontos.CompareTo(a.pontos));
 
-        for (int i = 0; i < alunos.Count; i++)
+        // Só reconstrói a lista na tela se algo mudou (evita piscar)
+        var sb = new System.Text.StringBuilder();
+        foreach (var a in alunos)
+            sb.Append(a.userId).Append('|').Append(a.pontos).Append('|')
+              .Append(a.respondeu ? 1 : 0).Append('|').Append(a.acertou ? 1 : 0).Append(';');
+        string assinatura = sb.ToString();
+
+        if (assinatura != ultimaAssinaturaLista)
         {
-            GameObject item = Instantiate(itemAlunoPrefab, contentContainer);
-            ItemAlunoSala ia = item.GetComponent<ItemAlunoSala>();
-            if (ia != null)
-                ia.Preencher(i + 1, alunos[i].nome, alunos[i].pontos, alunos[i].respondeu, alunos[i].acertou);
+            ultimaAssinaturaLista = assinatura;
+            LimparLista();
+
+            for (int i = 0; i < alunos.Count; i++)
+            {
+                GameObject item = Instantiate(itemAlunoPrefab, contentContainer);
+                ItemAlunoSala ia = item.GetComponent<ItemAlunoSala>();
+                if (ia != null)
+                    ia.Preencher(i + 1, alunos[i].nome, alunos[i].pontos,
+                                 alunos[i].respondeu, alunos[i].respondeu && alunos[i].acertou);
+            }
+        }
+
+        // Todos responderam antes do tempo? Libera já.
+        if (aguardandoLiberar && partidaIniciada && alunos.Count > 0)
+        {
+            bool todos = true;
+            foreach (var a in alunos)
+                if (!a.respondeu) { todos = false; break; }
+
+            if (todos) LiberarProximaPergunta();
         }
     }
 
-    // Igual ao parser do FirebaseManager (chave = userId, bloco = dados),
-    // com a diferença de também extrair "acertou" pro painel ao vivo.
+    void LimparLista()
+    {
+        foreach (Transform filho in contentContainer)
+            Destroy(filho.gameObject);
+    }
+
     List<DadosAlunoSala> ParsearAlunos(string json)
     {
         var lista = new List<DadosAlunoSala>();
@@ -572,8 +726,9 @@ public class MonitorSalaManager : MonoBehaviour
                     d.userId = chave;
                     d.nome = ExtrairString(bloco, "nome");
                     d.pontos = ExtrairInt(bloco, "pontos");
-                    d.respondeu = bloco.Contains("\"respondeu\":true");
+                    d.respondeuIndex = bloco.Contains("\"respondeuIndex\":") ? ExtrairInt(bloco, "respondeuIndex") : -1;
                     d.acertou = bloco.Contains("\"acertou\":true");
+                    d.visto = ExtrairNumero(bloco, "visto");
                     if (!string.IsNullOrEmpty(d.nome))
                         lista.Add(d);
                 }
@@ -608,6 +763,17 @@ public class MonitorSalaManager : MonoBehaviour
         return resultado;
     }
 
+    string ExtrairNumero(string json, string chave)
+    {
+        string busca = "\"" + chave + "\":";
+        int inicio = json.IndexOf(busca);
+        if (inicio < 0) return "";
+        inicio += busca.Length;
+        int fim = inicio;
+        while (fim < json.Length && char.IsDigit(json[fim])) fim++;
+        return json.Substring(inicio, fim - inicio);
+    }
+
     // ─────────────────────────────────────────────────────────────────
     // Encerrar sala
     // ─────────────────────────────────────────────────────────────────
@@ -625,15 +791,13 @@ public class MonitorSalaManager : MonoBehaviour
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// Dados de aluno na sala
-// ─────────────────────────────────────────────────────────────────────
-
 public class DadosAlunoSala
 {
     public string userId;
     public string nome;
     public int pontos;
-    public bool respondeu;
+    public bool respondeu;          // calculado pelo painel (respondeuIndex == pergunta atual)
+    public int respondeuIndex = -1; // número da última pergunta que o aluno respondeu
     public bool acertou;
+    public string visto = "";
 }

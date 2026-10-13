@@ -4457,6 +4457,9 @@ MonoBehaviour:
   userId: 
   nomeJogador: 
   codigoSalaAtual: 
+  reentradaPendente: 0
+  pontosReentrada: 0
+  respondeuIndexReentrada: -1
 --- !u!4 &299398285
 Transform:
   m_ObjectHideFlags: 0
@@ -11016,7 +11019,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -390, y: 300}
+  m_AnchoredPosition: {x: -270, y: 300}
   m_SizeDelta: {x: 400, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &737871973
@@ -12191,7 +12194,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Digite seu nome (opcional):'
+  m_text: 'Digite seu nome:'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -12563,7 +12566,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 590, y: 300}
+  m_AnchoredPosition: {x: 614, y: 300}
   m_SizeDelta: {x: 350, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &859168351
@@ -16373,6 +16376,9 @@ MonoBehaviour:
   userId: 
   nomeJogador: Jogador
   codigoSalaAtual: 
+  reentradaPendente: 0
+  pontosReentrada: 0
+  respondeuIndexReentrada: -1
 --- !u!4 &1123484225
 Transform:
   m_ObjectHideFlags: 0
@@ -20403,7 +20409,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1418958044
 RectTransform:
   m_ObjectHideFlags: 0
@@ -27039,7 +27045,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 110, y: 300}
+  m_AnchoredPosition: {x: 230, y: 300}
   m_SizeDelta: {x: 600, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1882347302

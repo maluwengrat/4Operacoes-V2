@@ -38,14 +38,20 @@ public class SalaManager : MonoBehaviour
     [Header("Painel Aluno")]
     public GameObject painelAluno;
     public TMP_InputField inputCodigoSala;
-    public TMP_InputField inputNomeAluno; // novo: nome digitado ou pré-preenchido da URL
+    public TMP_InputField inputNomeAluno; // obrigatório: digitado ou pré-preenchido da URL
     public Button btnEntrarSala;
 
     [Header("Painel Espera")]
     public GameObject painelEspera;
 
     // ── Senha do professor ────────────────────────────────────────────
+    // ATENÇÃO: fica dentro do build do jogo, então só serve como barreira simples.
     private const string SENHA_PROFESSOR = "prof123";
+
+    // Mesmas letras e números que o FirebaseManager usa para gerar o código da sala
+    private const string CARACTERES_CODIGO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private const int TAMANHO_CODIGO = 6;
+    private const int TAMANHO_MAX_NOME = 20;
 
     private bool souProfessor = false;
 
@@ -61,6 +67,9 @@ public class SalaManager : MonoBehaviour
         painelSenhaProfessor.SetActive(false);
         painelProfessor.SetActive(false);
         painelAluno.SetActive(false);
+
+        if (inputNomeAluno != null)
+            inputNomeAluno.characterLimit = TAMANHO_MAX_NOME;
 
         if (btnAbrirSala != null)
             btnAbrirSala.onClick.AddListener(AbrirPainelSala);
@@ -203,6 +212,7 @@ public class SalaManager : MonoBehaviour
             inputSenha.text = "";
         }
     }
+
     void CriarSalaClicked()
     {
         if (textoStatusSala != null) textoStatusSala.text = "Criando sala...";
@@ -230,6 +240,7 @@ public class SalaManager : MonoBehaviour
             }
         });
     }
+
     void IniciarJogoTurma()
     {
         if (string.IsNullOrEmpty(FirebaseManager.instance.codigoSalaAtual))
@@ -260,40 +271,82 @@ public class SalaManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // Entrar na sala (aluno)
+    // Entrar na sala (aluno): nome e código são obrigatórios
     // ─────────────────────────────────────────────────────────────────
+
+    bool CodigoTemFormatoValido(string codigo)
+    {
+        if (codigo.Length != TAMANHO_CODIGO) return false;
+        foreach (char c in codigo)
+            if (CARACTERES_CODIGO.IndexOf(c) < 0) return false;
+        return true;
+    }
+
+    // Tira aspas, barras e caracteres de controle (quebrariam o JSON enviado ao banco)
+    string LimparNome(string nome)
+    {
+        if (string.IsNullOrEmpty(nome)) return "";
+        var sb = new System.Text.StringBuilder();
+        foreach (char c in nome)
+        {
+            if (c == '"' || c == '\\' || char.IsControl(c)) continue;
+            sb.Append(c);
+        }
+        string r = sb.ToString().Trim();
+        return r.Length > TAMANHO_MAX_NOME ? r.Substring(0, TAMANHO_MAX_NOME).Trim() : r;
+    }
 
     void EntrarSalaClicked()
     {
-        string codigo = inputCodigoSala != null ? inputCodigoSala.text.Trim().ToUpper() : "";
+        // 1) Nome obrigatório
+        string nome = inputNomeAluno != null ? LimparNome(inputNomeAluno.text) : "";
+        if (string.IsNullOrEmpty(nome))
+        {
+            if (textoStatusSala != null)
+                textoStatusSala.text = "Digite seu nome para entrar.";
+            return;
+        }
+
+        // 2) Código obrigatório e no formato certo (6 letras/números)
+        string codigo = inputCodigoSala != null
+            ? inputCodigoSala.text.Replace(" ", "").Trim().ToUpper()
+            : "";
 
         if (string.IsNullOrEmpty(codigo))
         {
             if (textoStatusSala != null)
-                textoStatusSala.text = "Digite um código!";
+                textoStatusSala.text = "Digite o código da sala.";
+            return;
+        }
+
+        if (!CodigoTemFormatoValido(codigo))
+        {
+            if (textoStatusSala != null)
+                textoStatusSala.text = "Código inválido. Ele tem 6 letras ou números.";
             return;
         }
 
         if (textoStatusSala != null) textoStatusSala.text = "Entrando na sala...";
 
-        if (inputNomeAluno != null && !string.IsNullOrEmpty(inputNomeAluno.text.Trim()))
-        {
-            string nomeDigitado = inputNomeAluno.text.Trim();
-            if (nomeDigitado.Length > 20) nomeDigitado = nomeDigitado.Substring(0, 20);
-            FirebaseManager.instance.nomeJogador = nomeDigitado;
-        }
-        else if (!string.IsNullOrEmpty(FirebaseManager.instance.nomeJogador)
-                 && FirebaseManager.instance.nomeJogador.Length > 20)
-        {
-            FirebaseManager.instance.nomeJogador = FirebaseManager.instance.nomeJogador.Substring(0, 20);
-        }
+        FirebaseManager.instance.nomeJogador = nome;
 
+        // 3) O servidor confirma se a sala existe ("Sala não encontrada" se não existir)
         FirebaseManager.instance.EntrarNaSala(codigo, (sucesso, mensagemErro) =>
         {
             if (sucesso)
             {
                 souProfessor = false;
                 painelAluno.SetActive(false);
+
+                // Recarregou a página no meio da partida: volta direto para o jogo
+                if (FirebaseManager.instance.reentradaPendente)
+                {
+                    salaPanel.SetActive(false);
+                    DesativarTodosPaineis();
+                    GameManager.modoAtual = GameManager.ModoJogo.Turma;
+                    GameManager.instance.IniciarJogo();
+                    return;
+                }
 
                 if (SalaEsperaManager.instance != null)
                     SalaEsperaManager.instance.AbrirEspera(codigo);

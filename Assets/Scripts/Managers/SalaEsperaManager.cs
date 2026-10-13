@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -14,7 +13,8 @@ public class SalaEsperaManager : MonoBehaviour
     public Button btnSairEspera;
 
     private bool aguardando = false;
-    private float intervalo = 3f;
+    private bool consultando = false;
+    private float intervalo = 2f;
     private float timer = 0f;
     private int contadorPontos = 0;
 
@@ -31,13 +31,17 @@ public class SalaEsperaManager : MonoBehaviour
 
     void Update()
     {
-        if (!aguardando) return;
+        if (!aguardando || consultando) return;
 
-        timer -= Time.deltaTime;
+        timer -= Time.unscaledDeltaTime;
         if (timer <= 0f)
         {
             timer = intervalo;
-            StartCoroutine(VerificarStatusSala());
+            consultando = true;
+            if (FirebaseManager.instance != null)
+                FirebaseManager.instance.ConsultarStatusSala(OnStatusRecebido);
+            else
+                consultando = false;
         }
     }
 
@@ -49,6 +53,7 @@ public class SalaEsperaManager : MonoBehaviour
     {
         painelEspera.SetActive(true);
         aguardando = true;
+        consultando = false;
         timer = 0f;
 
         if (textoCodigoEspera != null)
@@ -62,6 +67,7 @@ public class SalaEsperaManager : MonoBehaviour
     {
         painelEspera.SetActive(false);
         aguardando = false;
+        consultando = false;
     }
 
     void SairDaEspera()
@@ -70,49 +76,40 @@ public class SalaEsperaManager : MonoBehaviour
         if (SalaManager.instance != null)
             SalaManager.instance.salaPanel.SetActive(false);
         if (GameManager.instance != null)
-            GameManager.instance.VoltarAoMenu();
+            GameManager.instance.VoltarAoMenu(); // também remove o aluno da sala
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // Verificar status da sala no Firebase
+    // Status da sala
+    // status: "aguardando", "jogando", "finalizada", "encerrada",
+    //         "null" (sala apagada) ou null (falha de rede nessa consulta)
     // ─────────────────────────────────────────────────────────────────
 
-    IEnumerator VerificarStatusSala()
+    void OnStatusRecebido(string status)
     {
-        string codigo = FirebaseManager.instance.codigoSalaAtual;
-        if (string.IsNullOrEmpty(codigo)) yield break;
+        consultando = false;
+        if (!aguardando) return;
+        if (status == null) return; // falha momentânea de rede: tenta de novo no próximo ciclo
 
-        // CORRIGIDO: essa URL não tinha o token de autenticação (?auth=...),
-        // então toda checagem de status era barrada pelas regras do Firebase
-        // ("auth != null") e falhava em silêncio — o aluno nunca detectava
-        // que o professor tinha iniciado a partida. Agora usamos o mesmo
-        // helper que o resto do projeto usa pra anexar o auth corretamente.
-        string urlSemAuth = "https://mathshooter-6c0f7-default-rtdb.firebaseio.com"
-                   + "/salas/" + codigo + "/status.json";
-        string url = FirebaseManager.instance.ConstruirUrlComAuth(urlSemAuth);
-
-        var req = UnityEngine.Networking.UnityWebRequest.Get(url);
-        yield return req.SendWebRequest();
-
-        if (req.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
+        if (status == "jogando")
         {
-            // DIAGNÓSTICO: agora loga se a checagem falhar, em vez de
-            // falhar em silêncio como antes.
-            Debug.LogWarning("[SalaEsperaManager] Falha ao checar status da sala: "
-                + req.error + " | HTTP " + req.responseCode);
-            yield break;
+            IniciarJogoAluno();
+            return;
         }
 
-        string status = req.downloadHandler.text.Replace("\"", "").Trim();
+        if (status == "encerrada" || status == "finalizada" || status == "null")
+        {
+            if (FeedbackManager.instance != null)
+                FeedbackManager.instance.MostrarMensagem("A sala foi encerrada pelo professor.", new Color(1f, 0.3f, 0.1f));
+            SairDaEspera();
+            return;
+        }
 
-        // Anima o texto de espera com pontos
+        // Ainda aguardando: anima o texto com pontos
         contadorPontos = (contadorPontos + 1) % 4;
         string pontos = new string('.', contadorPontos);
         if (textoEspera != null)
             textoEspera.text = "Aguardando o professor\niniciar a partida" + pontos;
-
-        if (status == "jogando")
-            IniciarJogoAluno();
     }
 
     void IniciarJogoAluno()
