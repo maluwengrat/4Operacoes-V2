@@ -20,9 +20,11 @@ public class SalaManager : MonoBehaviour
     public Button btnSouAluno;
     public Button btnSouProfessor;
 
-    // ── Painel senha professor ────────────────────────────────────────
-    [Header("Painel Senha Professor")]
+    // ── Painel de login do professor ──────────────────────────────────
+    // (os nomes dos campos antigos foram mantidos para não perder as referências no Inspector)
+    [Header("Painel Login Professor")]
     public GameObject painelSenhaProfessor;
+    public TMP_InputField inputLoginProfessor; // NOVO: campo do login (nome do professor)
     public TMP_InputField inputSenha;
     public Button btnConfirmarSenha;
     public Button btnCancelarSenha;
@@ -43,10 +45,6 @@ public class SalaManager : MonoBehaviour
 
     [Header("Painel Espera")]
     public GameObject painelEspera;
-
-    // ── Senha do professor ────────────────────────────────────────────
-    // ATENÇÃO: fica dentro do build do jogo, então só serve como barreira simples.
-    private const string SENHA_PROFESSOR = "prof123";
 
     // Mesmas letras e números que o FirebaseManager usa para gerar o código da sala
     private const string CARACTERES_CODIGO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -71,6 +69,9 @@ public class SalaManager : MonoBehaviour
         if (inputNomeAluno != null)
             inputNomeAluno.characterLimit = TAMANHO_MAX_NOME;
 
+        if (inputLoginProfessor != null)
+            inputLoginProfessor.characterLimit = 30;
+
         if (btnAbrirSala != null)
             btnAbrirSala.onClick.AddListener(AbrirPainelSala);
 
@@ -87,7 +88,7 @@ public class SalaManager : MonoBehaviour
             btnSouProfessor.onClick.AddListener(EscolherProfessor);
 
         if (btnConfirmarSenha != null)
-            btnConfirmarSenha.onClick.AddListener(VerificarSenha);
+            btnConfirmarSenha.onClick.AddListener(TentarLoginProfessor);
 
         if (btnCancelarSenha != null)
             btnCancelarSenha.onClick.AddListener(VoltarPainelAnterior);
@@ -122,8 +123,18 @@ public class SalaManager : MonoBehaviour
         if (textoStatusSala != null) textoStatusSala.text = "";
     }
 
+    // Sai da conta de professor se ele voltou sem ter criado uma sala
+    void SairDoModoProfessorSeNecessario()
+    {
+        var fb = FirebaseManager.instance;
+        if (fb != null && fb.ProfessorLogado && string.IsNullOrEmpty(fb.codigoSalaAtual))
+            fb.LogoutProfessor();
+    }
+
     void VoltarPainelAnterior()
     {
+        SairDoModoProfessorSeNecessario();
+
         if (historicoPaineis.Count == 0)
         {
             salaPanel.SetActive(false);
@@ -186,35 +197,78 @@ public class SalaManager : MonoBehaviour
 
     void EscolherProfessor()
     {
+        if (inputLoginProfessor != null)
+            inputLoginProfessor.text = "";
+
         if (inputSenha != null)
         {
             inputSenha.text = "";
             inputSenha.contentType = TMP_InputField.ContentType.Password;
         }
+
+        if (btnConfirmarSenha != null)
+            btnConfirmarSenha.interactable = true;
+
         IrParaPainel(painelSenhaProfessor);
     }
 
-    void VerificarSenha()
-    {
-        if (inputSenha == null) return;
+    // ─────────────────────────────────────────────────────────────────
+    // Login do professor (login + senha, validados no Firebase)
+    // ─────────────────────────────────────────────────────────────────
 
-        if (inputSenha.text == SENHA_PROFESSOR)
-        {
-            souProfessor = true;
-            IrParaPainel(painelProfessor);
-            if (textoStatusSala != null)
-                textoStatusSala.text = "Acesso liberado! Crie uma sala para a turma.";
-        }
-        else
+    void TentarLoginProfessor()
+    {
+        if (inputLoginProfessor == null)
         {
             if (textoStatusSala != null)
-                textoStatusSala.text = "Senha incorreta. Tente novamente.";
-            inputSenha.text = "";
+                textoStatusSala.text = "Campo de login não configurado no Inspector.";
+            return;
         }
+
+        if (inputSenha == null || FirebaseManager.instance == null) return;
+
+        string login = inputLoginProfessor.text.Trim();
+        string senha = inputSenha.text;
+
+        if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(senha))
+        {
+            if (textoStatusSala != null)
+                textoStatusSala.text = "Digite o login e a senha.";
+            return;
+        }
+
+        if (textoStatusSala != null) textoStatusSala.text = "Entrando...";
+        if (btnConfirmarSenha != null) btnConfirmarSenha.interactable = false;
+
+        FirebaseManager.instance.LoginProfessor(login, senha, (sucesso, mensagem) =>
+        {
+            if (btnConfirmarSenha != null) btnConfirmarSenha.interactable = true;
+            if (inputSenha != null) inputSenha.text = "";
+
+            if (sucesso)
+            {
+                souProfessor = true;
+                IrParaPainel(painelProfessor);
+                if (textoStatusSala != null)
+                    textoStatusSala.text = "Acesso liberado! Crie uma sala para a turma.";
+            }
+            else
+            {
+                if (textoStatusSala != null)
+                    textoStatusSala.text = mensagem;
+            }
+        });
     }
 
     void CriarSalaClicked()
     {
+        if (FirebaseManager.instance == null || !FirebaseManager.instance.ProfessorLogado)
+        {
+            if (textoStatusSala != null)
+                textoStatusSala.text = "Sessão de professor expirada. Volte e entre de novo.";
+            return;
+        }
+
         if (textoStatusSala != null) textoStatusSala.text = "Criando sala...";
         if (textoCodigoGerado != null) textoCodigoGerado.text = "";
 

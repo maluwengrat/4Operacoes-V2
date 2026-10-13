@@ -38,27 +38,19 @@ public class PoderManager : MonoBehaviour
     private int streakAtual = 0;
     private int poderAtual = -1;
     private bool escudoAtivo = false;
+    private bool selecionandoAlvo = false; // painel de escolha de adversário aberto
     private bool[] poderDesbloqueado = new bool[9]; // false por padrão = ainda não conquistado
-                                                    // Retorna o índice do poder atualmente carregado (-1 se nenhum)
+
+    // Retorna o índice do poder atualmente carregado (-1 se nenhum)
     public int GetPoderAtual() => poderAtual;
 
-    // Arrays com 9 posições agora (7 originais + Escudo + TempoLento)
+    // Arrays com 9 posições (7 originais + Escudo + TempoLento)
     private float[] cooldowns = { 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f };
     private float[] cooldownsMax = { 120f, 180f, 90f, 90f, 150f, 120f, 60f, 100f, 130f };
 
-    // REBALANCEADO: os valores anteriores (4, 8, 5, 5, 5, 6, 3, 4, 5) faziam
-    // quase todo poder carregar em bem menos de uma fase (7 ondas), e o erro
-    // só tirava 2 de streak — praticamente sem penalidade real. Agora os
-    // thresholds exigem sequências mais próximas de 1 a 2 fases inteiras,
-    // e a penalidade de erro foi aumentada (ver RegistrarErro), então
-    // carregar um poder volta a ser uma conquista de verdade, não algo
-    // que acontece a cada minuto.
-    //
-    // Isso vale pro modo SOLO, onde uma onda nova nasce a cada poucos
-    // segundos — dá pra emendar 8-14 acertos rápido. Ver streakNecessarioTurma
-    // logo abaixo pro modo Turma, onde o ritmo é bem mais lento.
+    // Sequência de acertos necessária pra carregar cada poder (rebalanceado:
+    // carregar um poder deve ser uma conquista, não algo que acontece a cada minuto).
     private int[] streakNecessario = { 8, 14, 9, 9, 9, 10, 6, 7, 9 };
-
 
     private string[] nomesPoderes = {
         "Inversão", "Tempestade", "Cronômetro",
@@ -101,8 +93,7 @@ public class PoderManager : MonoBehaviour
     }
 
     // Chame isso ao voltar pro menu, senão numa segunda partida Turma
-    // (mesma sessão do jogo) IniciarEscutaSeNecessario() nunca mais faz
-    // nada, porque a trava já ficou true pra sempre desde a primeira.
+    // IniciarEscutaSeNecessario() nunca mais faz nada.
     public void PararEscuta()
     {
         escutandoPoderes = false;
@@ -135,22 +126,16 @@ public class PoderManager : MonoBehaviour
 
     public void RegistrarAcerto(bool isBoss, float tempoResposta)
     {
-            streakAtual++;
-            int[] limiares = streakNecessario;   // agora sempre o mesmo array, independente do mo
+        streakAtual++;
+        int[] limiares = streakNecessario;
 
-            if (isBoss && streakAtual >= limiares[(int)TipoPoder.Tempestade])
+        if (isBoss && streakAtual >= limiares[(int)TipoPoder.Tempestade])
         {
-            CarregarPoder((int)TipoPoder.Tempestade); // ← só carrega, não ativa!
+            CarregarPoder((int)TipoPoder.Tempestade); // só carrega, não ativa!
             return;
         }
 
-        // CORRIGIDO: antes, essa condição ignorava completamente a sequência
-        // (streakAtual) — qualquer acerto abaixo de 3s carregava o poder,
-        // não importa se era o primeiro acerto da partida ou o vigésimo.
-        // Numa fase simples (ex.: adição), responder rápido é trivial, então
-        // esse poder aparecia o tempo todo. Agora ele também precisa da
-        // sequência mínima, igual aos outros — a resposta rápida só decide
-        // qual poder carrega quando os dois critérios já foram atingidos.
+        // A resposta rápida só decide qual poder carrega quando a sequência mínima já foi atingida.
         if (tempoResposta < 3f && streakAtual >= limiares[(int)TipoPoder.CronometraMaldito]
             && cooldowns[(int)TipoPoder.CronometraMaldito] <= 0f && poderAtual == -1)
         {
@@ -162,25 +147,16 @@ public class PoderManager : MonoBehaviour
         {
             if (streakAtual >= limiares[i] && cooldowns[i] <= 0f && poderAtual == -1)
             {
-                CarregarPoder(i); // ← só carrega, não ativa!
+                CarregarPoder(i); // só carrega, não ativa!
                 break;
             }
-
         }
     }
 
     public void RegistrarErro()
     {
-        // REBALANCEADO: antes tirava só 2 de streak por erro, o que na
-        // prática não penalizava quase nada (bastava 1 acerto extra pra
-        // "recuperar" o erro). No Solo agora tira 5 — um erro dói de
-        // verdade e atrasa o próximo poder.
-        //
-        // NOVO: no Turma isso ficaria desproporcional, porque os limiares
-        // já são bem menores (3-5). Tirar 5 de um streak que só precisa
-        // chegar a 3 zeraria o progresso inteiro num único erro — punitivo
-        // demais pra sala de aula, onde errar uma conta faz parte do
-        // aprendizado. Usa uma penalidade menor lá.
+        // No Solo o erro tira 5 de streak; na Turma tira 2, porque ali o ritmo é bem
+        // mais lento e errar uma conta faz parte do aprendizado.
         int penalidade = GameManager.modoAtual == GameManager.ModoJogo.Turma ? 2 : 5;
         streakAtual = Mathf.Max(0, streakAtual - penalidade);
 
@@ -188,6 +164,11 @@ public class PoderManager : MonoBehaviour
         {
             MostrarNotificacao("Poder perdido pelo erro!");
             poderAtual = -1;
+
+            // Se o aluno estava escolhendo o alvo desse poder, fecha o painel
+            if (selecionandoAlvo && selecionarAlvoUI != null)
+                selecionarAlvoUI.FecharSeletor();
+
             AtualizarVisualPoderes();
         }
     }
@@ -225,7 +206,7 @@ public class PoderManager : MonoBehaviour
 
             if (i == poderAtual)
             {
-                // Poder carregado — dourado e pulsando
+                // Poder carregado — dourado
                 if (img != null) img.color = new Color(1f, 0.85f, 0f, 1f);
                 cg.alpha = 1f;
                 cg.interactable = true;
@@ -255,60 +236,81 @@ public class PoderManager : MonoBehaviour
     {
         if (index != poderAtual) return;
         if (cooldowns[index] > 0f) return;
+        if (selecionandoAlvo) return; // já está escolhendo o alvo
 
         Debug.Log("[PoderManager] UsarPoder index=" + index
             + " tipo=" + (TipoPoder)index
             + " | GameManager.modoAtual=" + GameManager.modoAtual);
 
+        // Cada Ativar... devolve true se o poder foi usado na hora, ou false se o
+        // gasto fica pendente (painel de alvo aberto) ou se não deu pra usar.
+        bool consumidoAgora = true;
+
         switch ((TipoPoder)index)
         {
-            case TipoPoder.InversaoResposta: AtivarInversaoResposta(); break;
-            case TipoPoder.Tempestade: AtivarTempestade(); break;
-            case TipoPoder.CronometraMaldito: AtivarCronometraMaldito(); break;
-            case TipoPoder.Distorcao: AtivarDistorcao(); break;
+            case TipoPoder.InversaoResposta: consumidoAgora = AtivarInversaoResposta(); break;
+            case TipoPoder.Tempestade: consumidoAgora = AtivarTempestade(); break;
+            case TipoPoder.CronometraMaldito: consumidoAgora = AtivarCronometraMaldito(); break;
+            case TipoPoder.Distorcao: consumidoAgora = AtivarDistorcao(); break;
             case TipoPoder.EscudoDuplo: AtivarEscudoDuplo(); break;
-            case TipoPoder.CongelarRival: AtivarCongelarRival(); break;
+            case TipoPoder.CongelarRival: consumidoAgora = AtivarCongelarRival(); break;
             case TipoPoder.DicaRelampago: AtivarDicaRelampago(); break;
             case TipoPoder.Escudo: AtivarEscudoSimples(); break;
             case TipoPoder.TempoLento: AtivarTempoLentoPoder(); break;
         }
 
+        if (consumidoAgora)
+            ConsumirPoder(index);
+    }
+
+    // Gasta o poder: inicia o cooldown e descarrega
+    void ConsumirPoder(int index)
+    {
+        selecionandoAlvo = false;
         cooldowns[index] = cooldownsMax[index];
-        poderAtual = -1;
+        if (poderAtual == index) poderAtual = -1;
         AtualizarVisualPoderes();
     }
 
     // ─────────────────────────────────────────────────────────────────
     // Implementação dos poderes
     //
-    // Nos poderes que funcionam em Turma: antes o código chamava
-    // FirebaseManager.instance.EnviarPoderParaAdversario(tipo) direto,
-    // com 1 argumento só — isso escolhe um alvo sozinho, sem deixar o
-    // jogador escolher quem recebe (numa turma de 30, ia mirar em
-    // alguém arbitrário). Agora abre o seletor de alvo primeiro; o
-    // envio de fato e a notificação só acontecem depois que o jogador
-    // escolhe alguém na lista.
+    // Poderes ofensivos na Turma abrem o seletor de alvo. O poder só é gasto
+    // quando o jogador escolhe alguém; se cancelar (ou perder o poder por erro),
+    // ele continua carregado.
     // ─────────────────────────────────────────────────────────────────
 
-    void AtivarInversaoResposta()
+    // Abre o seletor de alvo. Devolve sempre false: o gasto acontece no callback.
+    bool AbrirSeletorParaPoder(int index, string tipoRede, string mensagemEnviado)
+    {
+        if (selecionarAlvoUI == null)
+        {
+            Debug.LogWarning("[PoderManager] selecionarAlvoUI não configurado no Inspector.");
+            return false; // poder continua carregado
+        }
+
+        selecionandoAlvo = true;
+        selecionarAlvoUI.AbrirSeletorDeAlvo(
+            tipoRede,
+            () =>
+            {
+                MostrarNotificacao(mensagemEnviado);
+                ConsumirPoder(index);
+            },
+            () => { selecionandoAlvo = false; });
+
+        return false;
+    }
+
+    bool AtivarInversaoResposta()
     {
         if (GameManager.modoAtual == GameManager.ModoJogo.Turma)
-        {
-            if (selecionarAlvoUI != null)
-            {
-                selecionarAlvoUI.AbrirSeletorDeAlvo("inversao",
-                    () => MostrarNotificacao("Inversão enviada ao adversário!"));
-            }
-            else
-            {
-                Debug.LogWarning("[PoderManager] selecionarAlvoUI não configurado no Inspector.");
-            }
-        }
-        else
-        {
-            StartCoroutine(DestacarRespostaCerta(15f));
-            MostrarNotificacao("Inversão ativada! Resposta certa em destaque!");
-        }
+            return AbrirSeletorParaPoder((int)TipoPoder.InversaoResposta, "inversao",
+                "Inversão enviada ao adversário!");
+
+        StartCoroutine(DestacarRespostaCerta(15f));
+        MostrarNotificacao("Inversão ativada! Resposta certa em destaque!");
+        return true;
     }
 
     IEnumerator EmbaralharInimigos(float duracao)
@@ -387,25 +389,16 @@ public class PoderManager : MonoBehaviour
             if (label != null) label.color = corOriginalTexto;
         }
     }
-    void AtivarTempestade()
+
+    bool AtivarTempestade()
     {
         if (GameManager.modoAtual == GameManager.ModoJogo.Turma)
-        {
-            if (selecionarAlvoUI != null)
-            {
-                selecionarAlvoUI.AbrirSeletorDeAlvo("tempestade",
-                    () => MostrarNotificacao("Tempestade enviada ao adversário!"));
-            }
-            else
-            {
-                Debug.LogWarning("[PoderManager] selecionarAlvoUI não configurado no Inspector.");
-            }
-        }
-        else
-        {
-            StartCoroutine(SpawnInimigosBonus(2));
-            MostrarNotificacao("Tempestade! Inimigos com a resposta certa!");
-        }
+            return AbrirSeletorParaPoder((int)TipoPoder.Tempestade, "tempestade",
+                "Tempestade enviada ao adversário!");
+
+        StartCoroutine(SpawnInimigosBonus(2));
+        MostrarNotificacao("Tempestade! Inimigos com a resposta certa!");
+        return true;
     }
 
     IEnumerator SpawnInimigosExtras(int quantidade)
@@ -454,47 +447,27 @@ public class PoderManager : MonoBehaviour
         }
     }
 
-    void AtivarCronometraMaldito()
+    bool AtivarCronometraMaldito()
     {
         if (GameManager.modoAtual == GameManager.ModoJogo.Turma)
-        {
-            if (selecionarAlvoUI != null)
-            {
-                selecionarAlvoUI.AbrirSeletorDeAlvo("cronometro",
-                    () => MostrarNotificacao("Cronômetro enviado ao adversário!"));
-            }
-            else
-            {
-                Debug.LogWarning("[PoderManager] selecionarAlvoUI não configurado no Inspector.");
-            }
-        }
-        else
-        {
-            if (GameManager.instance != null)
-                GameManager.instance.ReducirTimer(-8f);
-            MostrarNotificacao("Cronômetro! +8s no seu timer!");
-        }
+            return AbrirSeletorParaPoder((int)TipoPoder.CronometraMaldito, "cronometro",
+                "Cronômetro enviado ao adversário!");
+
+        if (GameManager.instance != null)
+            GameManager.instance.ReducirTimer(-8f);
+        MostrarNotificacao("Cronômetro! +8s no seu timer!");
+        return true;
     }
 
-    void AtivarDistorcao()
+    bool AtivarDistorcao()
     {
         if (GameManager.modoAtual == GameManager.ModoJogo.Turma)
-        {
-            if (selecionarAlvoUI != null)
-            {
-                selecionarAlvoUI.AbrirSeletorDeAlvo("acelerador",
-                    () => MostrarNotificacao("Distorção enviada ao adversário!"));
-            }
-            else
-            {
-                Debug.LogWarning("[PoderManager] selecionarAlvoUI não configurado no Inspector.");
-            }
-        }
-        else
-        {
-            StartCoroutine(AcelerarInimigos(5f, 0.5f));
-            MostrarNotificacao("Distorção! Inimigos 50% mais lentos por 5s!");
-        }
+            return AbrirSeletorParaPoder((int)TipoPoder.Distorcao, "acelerador",
+                "Distorção enviada ao adversário!");
+
+        StartCoroutine(AcelerarInimigos(5f, 0.5f));
+        MostrarNotificacao("Distorção! Inimigos 50% mais lentos por 5s!");
+        return true;
     }
 
     IEnumerator AcelerarInimigos(float duracao, float multiplicador)
@@ -533,25 +506,15 @@ public class PoderManager : MonoBehaviour
         }
     }
 
-    void AtivarCongelarRival()
+    bool AtivarCongelarRival()
     {
         if (GameManager.modoAtual == GameManager.ModoJogo.Turma)
-        {
-            if (selecionarAlvoUI != null)
-            {
-                selecionarAlvoUI.AbrirSeletorDeAlvo("congelar",
-                    () => MostrarNotificacao("Congelar enviado ao adversário!"));
-            }
-            else
-            {
-                Debug.LogWarning("[PoderManager] selecionarAlvoUI não configurado no Inspector.");
-            }
-        }
-        else
-        {
-            StartCoroutine(CongelarInimigos(4f));
-            MostrarNotificacao("Inimigos congelados por 4s!");
-        }
+            return AbrirSeletorParaPoder((int)TipoPoder.CongelarRival, "congelar",
+                "Congelar enviado ao adversário!");
+
+        StartCoroutine(CongelarInimigos(4f));
+        MostrarNotificacao("Inimigos congelados por 4s!");
+        return true;
     }
 
     IEnumerator CongelarInimigos(float duracao)
@@ -697,11 +660,15 @@ public class PoderManager : MonoBehaviour
         poderAtual = -1;
         escudoAtivo = false;
 
+        // Se o painel de alvo estava aberto, fecha (e zera o estado de seleção)
+        if (selecionandoAlvo && selecionarAlvoUI != null)
+            selecionarAlvoUI.FecharSeletor();
+        selecionandoAlvo = false;
+
         for (int i = 0; i < cooldowns.Length; i++)
             cooldowns[i] = 0f;
 
-        // Se quiser que os poderes voltem a aparecer "bloqueados/cinza" até
-        // serem conquistados de novo na nova partida, resete também:
+        // Os poderes voltam a aparecer "bloqueados/cinza" até serem conquistados de novo
         for (int i = 0; i < poderDesbloqueado.Length; i++)
             poderDesbloqueado[i] = false;
 

@@ -47,12 +47,19 @@ public class DadosJogador
 // FirebaseManager
 //
 // Estrutura no banco:
+//   professores/{uid}                   true   (criado só pelo console do Firebase)
 //   salas/{codigo}/professorUid
 //   salas/{codigo}/criadoEmMs
 //   salas/{codigo}/controle/status      aguardando | jogando | finalizada | encerrada
 //   salas/{codigo}/controle/modoManual  true | false
 //   salas/{codigo}/controle/pergunta    { enunciado, resposta, fase, index, boss, duracao, inicio }
 //   salas/{codigo}/jogadores/{userId}   { nome, ownerUid, pontos, fase, respondeuIndex, acertou, visto }
+//
+// Contas:
+//   - Aluno: login anônimo (automático).
+//   - Professor: login + senha (Firebase Auth e-mail/senha). O "login" vira o e-mail
+//     login@professor.mathshooter.app. A sessão fica só na memória: ao sair, o jogo
+//     volta para a conta anônima.
 // ─────────────────────────────────────────────────────────────────────
 
 public class FirebaseManager : MonoBehaviour
@@ -60,6 +67,10 @@ public class FirebaseManager : MonoBehaviour
     public static FirebaseManager instance;
 
     private const string FIREBASE_URL = "https://mathshooter-6c0f7-default-rtdb.firebaseio.com";
+
+    // Domínio "de mentirinha" usado para transformar o login do professor em e-mail.
+    // Ele não precisa existir. Use o MESMO domínio ao criar as contas no console do Firebase.
+    private const string DOMINIO_PROFESSOR = "professor.mathshooter.app";
 
     [Header("Autenticação (Firebase Anonymous Auth)")]
     [Tooltip("Web API Key do projeto — Configurações do Projeto > Geral, no console do Firebase.")]
@@ -82,6 +93,21 @@ public class FirebaseManager : MonoBehaviour
     private bool autenticado = false;
 
     public bool EstaAutenticado => autenticado;
+
+    // ── Sessão de professor ─────────────────────────────────────────────
+    public bool ProfessorLogado { get; private set; }
+    public string LoginProfessorAtual { get; private set; } = "";
+
+    // Sessão anônima guardada enquanto o professor está logado
+    private string anonIdToken = "";
+    private string anonRefreshToken = "";
+    private string anonUid = "";
+    private float anonTokenExpiraEm = 0f;
+
+    private int sessaoProfessorId = 0;       // muda a cada login/logout (cancela logouts pendentes)
+    private bool loginEmAndamento = false;
+    private int falhasLogin = 0;
+    private double bloqueadoAte = 0;         // Time.realtimeSinceStartupAsDouble
 
     // ── Relógio do servidor ─────────────────────────────────────────────
     private bool relogioSincronizado = false;
@@ -179,8 +205,31 @@ public class FirebaseManager : MonoBehaviour
         return r.Length == 0 ? "Jogador" : r;
     }
 
+    // Escapa texto para colocar dentro de uma string JSON (usado na senha, que pode ter qualquer caractere)
+    static string EscaparJson(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        var sb = new System.Text.StringBuilder();
+        foreach (char c in s)
+        {
+            switch (c)
+            {
+                case '\\': sb.Append("\\\\"); break;
+                case '"': sb.Append("\\\""); break;
+                case '\n': sb.Append("\\n"); break;
+                case '\r': sb.Append("\\r"); break;
+                case '\t': sb.Append("\\t"); break;
+                default:
+                    if (c < 0x20) sb.Append("\\u").Append(((int)c).ToString("x4"));
+                    else sb.Append(c);
+                    break;
+            }
+        }
+        return sb.ToString();
+    }
+
     // ─────────────────────────────────────────────────────────────────
-    // Autenticação (Anonymous Auth)
+    // Autenticação anônima (alunos)
     // ─────────────────────────────────────────────────────────────────
 
     string ChaveRefreshPlayerPrefs() => "firebaseRefreshToken_" + Application.dataPath.GetHashCode();
@@ -296,11 +345,22 @@ public class FirebaseManager : MonoBehaviour
 
             if (!autenticado)
             {
-                yield return AutenticarAnonimo();
-                if (autenticado)
+                // A sessão do professor expirou e não renovou: volta para a conta anônima
+                if (ProfessorLogado)
                 {
-                    PlayerPrefs.SetString(ChaveRefreshPlayerPrefs(), refreshToken);
-                    PlayerPrefs.Save();
+                    Debug.LogWarning("[FirebaseManager] Sessão de professor expirada. Voltando para a conta anônima.");
+                    RestaurarSessaoAnonima();
+                    yield return RenovarToken();
+                }
+
+                if (!autenticado)
+                {
+                    yield return AutenticarAnonimo();
+                    if (autenticado)
+                    {
+                        PlayerPrefs.SetString(ChaveRefreshPlayerPrefs(), refreshToken);
+                        PlayerPrefs.Save();
+                    }
                 }
             }
         }
@@ -326,6 +386,225 @@ public class FirebaseManager : MonoBehaviour
 
     // Mantido por compatibilidade com outros scripts.
     public string ConstruirUrlComAuth(string urlSemAuth) => ComAuth(urlSemAuth);
+
+    // ─────────────────────────────────────────────────────────────────
+    // Login do professor (login + senha)
+    // ─────────────────────────────────────────────────────────────────
+
+    // Aceita só letras sem acento, números, ponto, hífen e sublinhado (3 a 30 caracteres).
+    // Devolve o login normalizado (minúsculo) ou null se for inválido.
+    public static string NormalizarLoginProfessor(string login)
+    {
+        if (string.IsNullOrEmpty(login)) return null;
+        string l = login.Trim().ToLowerInvariant();
+        if (l.Length < 3 || l.Length > 30) return null;
+
+        foreach (char c in l)
+        {
+            bool ok = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '.' || c == '_' || c == '-';
+            if (!ok) return null;
+        }
+
+        if (l[0] == '.' || l[l.Length - 1] == '.') return null;
+        return l;
+    }
+
+    // callback(sucesso, mensagem)
+    public void LoginProfessor(string login, string senha, System.Action<bool, string> callback)
+    {
+        StartCoroutine(LoginProfessorCoroutine(login, senha, callback));
+    }
+
+    IEnumerator LoginProfessorCoroutine(string login, string senha, System.Action<bool, string> callback)
+    {
+        if (loginEmAndamento)
+        {
+            callback(false, "Aguarde, entrando...");
+            yield break;
+        }
+
+        loginEmAndamento = true;
+        yield return LoginProfessorInterno(login, senha, callback);
+        loginEmAndamento = false;
+    }
+
+    IEnumerator LoginProfessorInterno(string login, string senha, System.Action<bool, string> callback)
+    {
+        // Bloqueio temporário depois de várias tentativas erradas (o Firebase também limita por conta)
+        double agora = Time.realtimeSinceStartupAsDouble;
+        if (agora < bloqueadoAte)
+        {
+            int resta = Mathf.CeilToInt((float)(bloqueadoAte - agora));
+            callback(false, "Muitas tentativas. Aguarde " + resta + "s para tentar de novo.");
+            yield break;
+        }
+
+        // Já está logado: só renova a sessão (e cancela um logout que estava pendente)
+        if (ProfessorLogado)
+        {
+            sessaoProfessorId++;
+            callback(true, "");
+            yield break;
+        }
+
+        string loginNorm = NormalizarLoginProfessor(login);
+        if (loginNorm == null)
+        {
+            callback(false, "Login inválido. Use letras sem acento, números, ponto, hífen ou sublinhado (3 a 30 caracteres).");
+            yield break;
+        }
+
+        if (string.IsNullOrEmpty(senha))
+        {
+            callback(false, "Digite a senha.");
+            yield break;
+        }
+
+        if (!autenticado) yield return EsperarAutenticacao();
+        if (!autenticado)
+        {
+            callback(false, "Sem conexão com o servidor. Tente novamente.");
+            yield break;
+        }
+
+        string email = loginNorm + "@" + DOMINIO_PROFESSOR;
+        string url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + firebaseApiKey;
+        string corpo = "{\"email\":\"" + email + "\","
+                     + "\"password\":\"" + EscaparJson(senha) + "\","
+                     + "\"returnSecureToken\":true}";
+
+        bool sucessoHttp = false;
+        string resposta = "";
+        string erroRede = "";
+
+        using (UnityWebRequest req = new UnityWebRequest(url, "POST"))
+        {
+            req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(corpo));
+            req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
+
+            yield return req.SendWebRequest();
+
+            sucessoHttp = req.result == UnityWebRequest.Result.Success;
+            resposta = req.downloadHandler.text;
+            erroRede = req.error;
+        }
+
+        if (!sucessoHttp)
+        {
+            // Erro de rede (sem resposta do servidor): não conta como senha errada
+            if (string.IsNullOrEmpty(resposta))
+            {
+                callback(false, "Erro de rede. Tente novamente.");
+                yield break;
+            }
+
+            if (resposta.Contains("TOO_MANY_ATTEMPTS"))
+            {
+                callback(false, "Muitas tentativas. Tente de novo mais tarde.");
+                yield break;
+            }
+
+            RegistrarFalhaLogin();
+            Debug.LogWarning("[FirebaseManager] Login de professor recusado: " + ExtrairValorString(resposta, "message"));
+            callback(false, "Login ou senha incorretos.");
+            yield break;
+        }
+
+        string novoIdToken = ExtrairValorString(resposta, "idToken");
+        string novoRefresh = ExtrairValorString(resposta, "refreshToken");
+        string novoUid = ExtrairValorString(resposta, "localId");
+        float.TryParse(ExtrairValorString(resposta, "expiresIn"), out float expiraSeg);
+        if (expiraSeg <= 0f) expiraSeg = 3600f;
+
+        if (string.IsNullOrEmpty(novoIdToken) || string.IsNullOrEmpty(novoUid))
+        {
+            callback(false, "Resposta inesperada do servidor. Tente novamente.");
+            yield break;
+        }
+
+        // Guarda a sessão anônima e passa a usar a do professor (só em memória)
+        anonIdToken = idToken;
+        anonRefreshToken = refreshToken;
+        anonUid = authUid;
+        anonTokenExpiraEm = tokenExpiraEm;
+
+        idToken = novoIdToken;
+        refreshToken = novoRefresh;
+        authUid = novoUid;
+        tokenExpiraEm = Time.unscaledTime + Mathf.Max(60f, expiraSeg - 60f);
+        autenticado = true;
+
+        // Confere se a conta está na lista de professores (criada só pelo console)
+        var rLista = new RespostaHttp();
+        yield return Requisitar("GET", "/professores/" + authUid + ".json", null, rLista, 2);
+
+        if (!rLista.sucesso)
+        {
+            RestaurarSessaoAnonima();
+            yield return RenovarToken();
+            callback(false, "Não foi possível verificar a permissão. Tente novamente.");
+            yield break;
+        }
+
+        if (rLista.corpo.Trim() != "true")
+        {
+            RestaurarSessaoAnonima();
+            yield return RenovarToken();
+            RegistrarFalhaLogin();
+            callback(false, "Esta conta não tem permissão de professor.");
+            yield break;
+        }
+
+        falhasLogin = 0;
+        ProfessorLogado = true;
+        LoginProfessorAtual = loginNorm;
+        sessaoProfessorId++;
+        Debug.Log("[FirebaseManager] Professor autenticado: " + loginNorm);
+        callback(true, "");
+    }
+
+    void RegistrarFalhaLogin()
+    {
+        falhasLogin++;
+        if (falhasLogin >= 5)
+        {
+            bloqueadoAte = Time.realtimeSinceStartupAsDouble + 60.0;
+            falhasLogin = 0;
+        }
+    }
+
+    // Volta para a conta anônima (só troca as variáveis; quem chama renova o token)
+    void RestaurarSessaoAnonima()
+    {
+        idToken = anonIdToken;
+        refreshToken = anonRefreshToken;
+        authUid = anonUid;
+        tokenExpiraEm = anonTokenExpiraEm;
+        autenticado = !string.IsNullOrEmpty(idToken);
+
+        ProfessorLogado = false;
+        LoginProfessorAtual = "";
+        sessaoProfessorId++;
+    }
+
+    // Sai da conta de professor e volta para a conta anônima
+    public void LogoutProfessor()
+    {
+        if (!ProfessorLogado) return;
+        StartCoroutine(LogoutProfessorCoroutine());
+    }
+
+    IEnumerator LogoutProfessorCoroutine()
+    {
+        if (!ProfessorLogado) yield break;
+
+        RestaurarSessaoAnonima();
+        yield return RenovarToken();
+        if (!autenticado) yield return AutenticarAnonimo();
+
+        Debug.Log("[FirebaseManager] Sessão de professor encerrada.");
+    }
 
     // ─────────────────────────────────────────────────────────────────
     // Requisição única (todas as chamadas ao banco passam por aqui)
@@ -374,7 +653,7 @@ public class FirebaseManager : MonoBehaviour
             if (saida.codigo == 401 && !semPermissao)
             {
                 yield return RenovarToken();
-                if (!autenticado) yield return AutenticarAnonimo();
+                if (!autenticado && !ProfessorLogado) yield return AutenticarAnonimo();
                 continue;
             }
 
@@ -641,7 +920,7 @@ public class FirebaseManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // Criar sala (professor)
+    // Criar sala (professor) — exige login de professor
     // ─────────────────────────────────────────────────────────────────
 
     string GerarCodigoSala()
@@ -660,6 +939,13 @@ public class FirebaseManager : MonoBehaviour
 
     IEnumerator CriarSalaCoroutine(System.Action<string> callback)
     {
+        if (!ProfessorLogado)
+        {
+            Debug.LogError("Criar sala exige login de professor.");
+            callback(null);
+            yield break;
+        }
+
         if (!autenticado) yield return EsperarAutenticacao();
         if (!autenticado) { callback(null); yield break; }
 
@@ -962,7 +1248,7 @@ public class FirebaseManager : MonoBehaviour
         callback?.Invoke(r.sucesso);
     }
 
-    // Encerra a sala e, depois de dar tempo aos alunos de perceberem, apaga ela do banco
+    // Encerra a sala, apaga ela do banco e sai da conta de professor
     public void EncerrarSalaNoServidor(string codigo)
     {
         if (string.IsNullOrEmpty(codigo)) return;
@@ -971,6 +1257,8 @@ public class FirebaseManager : MonoBehaviour
 
     IEnumerator EncerrarSalaCoroutine(string codigo)
     {
+        int sessao = sessaoProfessorId;
+
         var r = new RespostaHttp();
         yield return Requisitar("PUT", "/salas/" + codigo + "/controle/status.json", "\"encerrada\"", r, 3, true);
 
@@ -979,8 +1267,8 @@ public class FirebaseManager : MonoBehaviour
         else
             Debug.LogError("Erro ao encerrar sala: " + r.erro);
 
-        // Alunos que não virem "encerrada" a tempo veem a sala sumir e saem do mesmo jeito
-        yield return new WaitForSecondsRealtime(20f);
+        // Dá tempo dos alunos perceberem. Quem não vir "encerrada" vê a sala sumir e sai do mesmo jeito.
+        yield return new WaitForSecondsRealtime(5f);
 
         var rDel = new RespostaHttp();
         yield return Requisitar("DELETE", "/salas/" + codigo + ".json", null, rDel, 2, true);
@@ -989,6 +1277,10 @@ public class FirebaseManager : MonoBehaviour
             Debug.Log("Sala removida do banco: " + codigo);
         else
             Debug.LogWarning("Não foi possível remover a sala " + codigo + ": " + rDel.erro);
+
+        // Sai da conta de professor, a não ser que ele já tenha entrado de novo ou criado outra sala
+        if (ProfessorLogado && sessao == sessaoProfessorId && string.IsNullOrEmpty(codigoSalaAtual))
+            yield return LogoutProfessorCoroutine();
     }
 
     // Mantido por compatibilidade (o GameManager agora usa o polling único de perguntas)
@@ -1295,9 +1587,8 @@ public class FirebaseManager : MonoBehaviour
                                                int fase, int index, bool boss, float duracao,
                                                System.Action<bool> callback)
     {
-        string enunciadoEscapado = enunciado.Replace("\\", "\\\\").Replace("\"", "\\\"");
         string json = "{"
-            + "\"enunciado\":\"" + enunciadoEscapado + "\","
+            + "\"enunciado\":\"" + EscaparJson(enunciado) + "\","
             + "\"resposta\":" + resposta + ","
             + "\"fase\":" + fase + ","
             + "\"index\":" + index + ","

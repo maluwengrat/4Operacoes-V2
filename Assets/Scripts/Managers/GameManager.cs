@@ -574,6 +574,9 @@ public class GameManager : MonoBehaviour
         perguntasUsadas.Clear();
         tempoInicioFase = Time.time;
 
+        // Recomeço depois do game over: poderes e sequência de acertos voltam ao zero
+        PoderManager.instance?.ResetarPoderes();
+
         MostrarSomente(null);
         hudPanel.SetActive(true);
 
@@ -843,6 +846,7 @@ public class GameManager : MonoBehaviour
         questionText.text = perguntaAtual;
         historicoContas.Add(perguntaAtual + correctAnswer);
         tempoPerguntaInicio = Time.time;
+        tempoInicioQuestao = Time.time;
     }
 
     void GerarPerguntaBoss()
@@ -897,6 +901,7 @@ public class GameManager : MonoBehaviour
 
         historicoContas.Add(perguntaAtual + correctAnswer);
         tempoPerguntaInicio = Time.time;
+        tempoInicioQuestao = Time.time;
     }
 
     float[] GerarPosicoesX(int quantidade)
@@ -949,6 +954,8 @@ public class GameManager : MonoBehaviour
             if (!acertosPorFase.ContainsKey(faseAtual)) acertosPorFase[faseAtual] = 0;
             acertosPorFase[faseAtual]++;
 
+            float tempoResposta = Time.time - tempoPerguntaInicio;
+
             timerAtivo = false;
             timerText.gameObject.SetActive(false);
 
@@ -972,8 +979,11 @@ public class GameManager : MonoBehaviour
             if (TutorialManager.instance != null && TutorialManager.instance.modoGuiado)
                 TutorialManager.instance.NotificarAcerto();
 
-            PoderManager.instance?.ResetarPoderes();
-            PoderManager.instance?.PararEscuta();
+            // Poderes no Solo: o acerto soma na sequência e pode carregar um poder.
+            // (No tutorial guiado quem controla os poderes é o TutorialManager.)
+            bool tutorialGuiado = TutorialManager.instance != null && TutorialManager.instance.modoGuiado;
+            if (!tutorialGuiado && PoderManager.instance != null)
+                PoderManager.instance.RegistrarAcerto(isBossWave, tempoResposta);
 
             foreach (var e in FindAll<Enemy>())
                 if (e != null) Destroy(e.gameObject);
@@ -1065,7 +1075,7 @@ public class GameManager : MonoBehaviour
                 EfeitosManager.instance.EfeitoAcerto(Vector3.zero);
 
             if (PoderManager.instance != null)
-                PoderManager.instance.RegistrarAcerto(false, Time.time - tempoPerguntaInicio);
+                PoderManager.instance.RegistrarAcerto(turmaPerguntaAtualBoss, Time.time - tempoPerguntaInicio);
         }
         else
         {
